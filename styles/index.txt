@@ -6,3 +6,5 @@ body
 (nav_bar)
 
 change on branch
+
+(footer stuff)
