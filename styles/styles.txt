@@ -1,7 +1,3 @@
 text-color: red;
 font-size: large;
-<<<<<<< HEAD
 font-weight: bold;
-
-=======
->>>>>>> abc1ee25c85dc4ac3b466c33ea52fb985dc0d535
