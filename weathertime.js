@@ -4,7 +4,7 @@ const now = new Date()
 now ;
 
 //have user set city
-api.openweathermap.org/data/2.5/weather?id=2158177&units=metric&appid={2d6333bd76970c4b1d16306b517f334c}
+GET api.openweathermap.org/data/2.5/weather?id=2158177&units=metric&appid={2d6333bd76970c4b1d16306b517f334c}
 
 //importing openweathermap api
 // reference https://stackoverflow.com/questions/36174177/show-local-weather-using-openweathermap-api
