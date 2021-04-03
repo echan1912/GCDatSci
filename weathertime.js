@@ -4,7 +4,7 @@ const now = new Date()
 now ;
 
 //have user set city
-api.openweathermap.org/data/2.5/weather?q=Melbourne,au&callback=test&appid={95d45e22e25beabfd8f355a8a82456c9}
+api.openweathermap.org/data/2.5/weather?id=2158177&units=metric&appid={2d6333bd76970c4b1d16306b517f334c}
 
 //importing openweathermap api
 // reference https://stackoverflow.com/questions/36174177/show-local-weather-using-openweathermap-api
@@ -14,7 +14,7 @@ var getWeather = function(data) {
         lat: data.lat,
         lon: data.lon,
         units: "metric",
-        appid: "95d45e22e25beabfd8f355a8a82456c9"
+        appid: "2d6333bd76970c4b1d16306b517f334c"
     }, showWeather, 'jsonp');
 };
 
