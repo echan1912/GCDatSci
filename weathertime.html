@@ -1,40 +1,36 @@
 <!DOCTYPE html>
 <!--importing weather api here-->
-<script>// set date and time
-    var d = new Date("03/25/2015");
-    document.getElementById("time").innerHTML = d;
-    //shows user date
-    now ;
-</script>
-<html lang="en">
+<html lang="en" style="background-color: grey; font-family:Courier, monospace;">
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Weather</title>
 </head>
 <body>
-    <!--title-->
-    <h1>Good day!</h1>
+    
 <!--weather section-->
 <section>
-    <h1>insert weather here</h1>
-    <h2>insert weather description here light rain,sunny etc</h2>
-    <!--headers are h1 to h6-->
-    <img width="200" height="200" src="put weather button here" alt="Weather button">
-    <!-- set button dimensions-->
-    <p>want to change to observatory site if click into button </p>
-    <a href="https://openweathermap.org/">Weather source</a></section>
+    <h1><strong>Weather</strong></h1>
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/2.1.3/jquery.min.js"></script>
+    <script>
+        function gettingJSON(){
+            document.write("jquery loaded");
+            $.getJSON("https://api.openweathermap.org/data/2.5/weather?id=2158177&units=metric&appid=2d6333bd76970c4b1d16306b517f334c",function(json){
+                document.write(JSON.stringify(json));
+            });
+        }
+    </script>
+    <button id = "getIt" onclick = "gettingJSON()">Current weather</button>
+    <a href="https://openweathermap.org/">More weather</a></section>
 
 <!--time and city section-->
-<section>    <!--might want to change the widget so they can change the time-->
-    <h1><div style="text-align:center;padding:1em 0;"> <h3><span style="color:gray;"><br />Melbourne</a></h3> <width="100%" height="115" frameborder="0" seamless></div></h1>
-    <!--headers are h1 to h6-->
-    <img width="200" height="200" src="put time button here" alt="Time button">
-    <!-- set button dimensions-->
+<section> 
 
-    <h3>location of user</h3>
-    <p id="time">Current date and time is</p>
-    <a href="https://www.timeanddate.com/worldclock/">Worldwide clock</a></section>
+    <h1><strong>Time</strong></h1>
+    <p id="time"><script>// set date and time
+        var d = new Date();
+        document.getElementById("time").innerHTML = d;
+    </script></p>
+</section>
 </body>
 </html>
