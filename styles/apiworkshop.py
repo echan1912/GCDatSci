@@ -1,6 +1,5 @@
 import configparser
 import requests
-import pprint from pprint #prints json nicely
 
 def get_config():
     c = configparser.ConfigParser()
@@ -18,5 +17,5 @@ def main():
     api_key = config[0]
     spotify = get_spotify(api_key)
 
-    pprint(spotify)
+    print(spotify)
 
