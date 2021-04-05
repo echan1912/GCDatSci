@@ -8,7 +8,7 @@ def get_config():
 
 # writing GET request
 def get_spotify():
-    url = "https://api.spotify.com/v1/search?q=Mamoru%20Miyano&type=artist&access_token=\()".format(api_key)
+    url = requests.get("https://api.spotify.com/v1/search?q=Mamoru%20Miyano&type=artist", header={'api_key': api_key})
     r = requests.get(url)
     return r.json()
 
