@@ -1,0 +1,55 @@
+---
+title: "R Bootcamp: Course 4"
+author: "Elizabeth Chan"
+date: "Sunday, May 9, 2021"
+output: html_notebook
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Text Formatting
+
+I am writing a paragraph using plain text. The R Markdown makes use of YAML. I am using the following syntax to *italicise*, **bold**, superscript^2^, [hyperlink to my Github](https://github.com/echan1912) and write inline equations using Latex such as $y = m\mu + \sigma$.
+
+
+* Here is an unordered list
+* Name
+     + Mamoru
+     + Miyano
+
+1. Here is an ordered list
+2. Miyano's albums by release order
+     + Break
+     + Wonder
+    
+I use double tab indents for the sub-items.
+
+## Tables
+
+I manually enter a table like this
+
+**Table 1:** Mean and Median for Speed and Distance
+
+Variable|Mean |Median 
+--------|-----|------ 
+Speed   |15.40|15.0 
+Distance|42.98|36.0
+
+```{r}
+library(knitr)
+knitr::kable(anscombe, caption = "Anscombe's Quartet Data")
+```
+
+### Chunks
+```{r}
+summary(cars)
+```
+
+```{r, echo=FALSE}
+plot(cars)
+```
+
+``I am going to report my R code inline by bracketing my work in two single quotes. For example, the mean speed was 15.4, *SD* = 5.29 with a sample size *n* = 50. ``
+
