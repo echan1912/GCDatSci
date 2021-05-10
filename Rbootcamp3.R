@@ -39,3 +39,13 @@ samp <- Diamonds %>% sample_n(30)
 qplot(data = samp, x = carat, geom = "dotplot")
 # pick better binwidth
 samp %>% qplot(data = ., x = carat, geom = "dotplot", binwidth=0.2)
+# statistical summaries
+Diamonds$carat %>% range()
+range <- 5.01 - 0.20
+range
+
+var(Diamonds$carat)
+sd(Diamonds$carat)
+quantile(Diamonds$carat)
+IQR(Diamonds$carat)
+median(Diamonds$carat)
