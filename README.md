@@ -1,6 +1,7 @@
 # GCDatSci
 My assignments and side projects during my online Graduate Certificate Studies in Data Science at RMIT.
 
+chronicle: contains work I've done in Chronicle Hackathon 2021, a Google Developer's Student Club Melbourne  with the theme 'Consumer Tech'. the full app project can be found on https://github.com/emansih/EpicPython (We won 3rd place)
 styles: contains work I've done in Hackiethon 2021, a beginner hackathon with the theme 'Work/Study from Home web app' for students struggling under COVID. the full app project can be found on https://github.com/emansih/Hackiton 
 
 RBootcamp - knitted HTML link http://rpubs.com/echan1912/rbootcamp4
