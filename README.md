@@ -11,5 +11,5 @@ dataset sources:
 * assignment2 - breast cancer dataset from Kaggle/UCI https://www.kaggle.com/uciml/breast-cancer-wisconsin-data
 * rbootcamp2 - bicycle dataset from Victorian government of Australia https://discover.data.vic.gov.au/dataset/bicycle-volume-and-speed
 * rbootcamp3, Module2 - diamonds dataset from Kaggle https://www.kaggle.com/shivam2503/diamonds
-* A1_template - Australian Population Demographics 2016 grouped by region, age and gender
+* A1_template - pop_dataset002 Australian Population Demographics 2016 
 
