@@ -1,0 +1,536 @@
+---
+title: "Assessment 1"
+author: "Elizabeth Chan + s3875793"
+date: "21/5/2021"
+output:
+  html_document: default
+  pdf_document: default
+Instruction: 'Run All -> Knit to HTML -> Open in Browser -> Right click and select
+  ''print'' -> Destination: save as PDF -> submit your PDF file'
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+# Introduction
+
+```{r}
+# Include all the libraries here
+library(dplyr)
+library(ggplot2)
+library(magrittr) # for piping
+library(Hmisc)
+```
+
+```
+
+
+# Question 1
+
+Using the correct code, check the data by completing the following steps and answer each question: 
+
+```{r}
+
+# read the data 
+data <- read.table("pop_dataset_0002.txt", header=TRUE, sep = ",")
+head(data)
+
+# 1.1 Print out the dimensions of the data frame. 
+dim(data)
+
+# 1.2 Print out the names and type of each of the data frame's columns. 
+names(data)
+data$region %>% class
+data$age %>% class
+data$gender %>% class
+data$population %>% class
+# 1.3 Print out the number of unique regions in the dataset. 
+data[c("region")] %>% unique %>% count
+# 1.4 What is the minimum age bin? 0-1
+min(data$age)
+# 1.5 What is the maximum age bin? 55-56
+max(data$age)
+# 1.6 What is the bin size for the age field? 
+```
+I passed the txt file into a dataframe with the read.table function, setting header=TRUE since the first row contains the column names, and each value is separated by a comma so the delimiter is set to ,. head() function here and in following answers is used to peek the data that has many rows.
+The dimensions of the data frame is 56000 rows x 5 columns.
+The names of the columns are region, age, gender and population. Their classes are character, integer, character and integer respectively. This makes sense because region is a nominal qualitative variable that labels region names, age is a continous quantitative variables that can take on any value above 0, gender is another nominal qualitative categorical variable that has two binary options M (Male) or F (Female), population is a discrete quantitative variable that counts the number of people that belong to a certain gender, age and region per row.
+There are 500 unique regions. The unique and count functions are used to detect then count the number of unique values in the region column.
+The minimum age bin is 0 to 1 by applying min function to the age column.
+The maximum age bin is 55 to 56 by applying the max function to the age column.
+The bin size is 1
+
+# Question 2. 
+
+Perform the following data analysis by looking at some descriptive statistics on the complete data set and answer both questions: 
+
+
+```{r}
+
+# 2.1 Use the expected value for the age to find the mean age for the whole data sample. 
+
+# we want the sum of population for each age bin
+data$agepop <- data$age*data$population
+mean <- sum(data$agepop)/sum(data$population)
+mean 
+# the mean is 27.80027. 27.80027 is in the age bin 27
+
+# 2.2 Provide the standard deviation for the whole data sample. 
+# find proportion of population with age bin 28
+total27 <- data %>% filter(age==27)
+# find proportion of total population
+p <- sum(total27$population)/sum(data$population)
+# bin 27 is 0.0205 (to 3 significant figures) of the population
+sqrt(mean(1-p))
+# the standard deviation is 0.9897092
+```
+Since each region has multiple rows that add up to their population, I wanted to find the average (mean) age of all the data by multiplying age with population in each row to create a new column called 'agepop' . Adding the agepop together then dividing by the total population of the entire dataset gives the mean age of the whole data. Since this is the mean/expected value, we can find the standard deviation using it according to the formula sqrt(mean(1-p)), where p is the probability, or proportion of people that belong to the mean age. We subset the data to find the number of people with the mean age. Since 27.80027 belongs to age bin 27-28, we filter the population from that. We divide the total population of people in age bin 27 by the total population of the entire data to give the p. The total population of the entire dataset can be found by summing the population column with sum function. Taking the complement of p multipled by the mean gives the variance, and the square root of variance gives the standard deviation.
+
+# Question 3. 
+
+Record the following statistics on the means from each region: 
+
+```{r}
+
+## 3.1 mean 
+# mean age for each region
+data_summary <- 
+  data %>% 
+  group_by(region) %>% 
+  summarise(weighted_age = weighted.mean(age, population))
+
+data_summary %>% head()
+
+# find summary statistics with 
+summary(data_summary)
+
+# the mean of weighted_ages (mean ages) can be found with summary(data_summary), which is 30.61
+
+## 3.2 standard deviation 
+
+data_summary_new <- 
+  data %>% 
+  group_by(region) %>% 
+  summarise(weighted_sd = sqrt(wtd.var(age, population)))
+
+data_summary_new %>% head()
+
+
+## 3.3 minimum 
+data_summary[order(data_summary$weighted_age),] %>% head()
+# SSC22193 is the region with minimum mean age of 2
+
+## 3.4 first quartile is 27.43 
+
+## 3.5 median is 29.23
+
+## 3.6 third quartile is 33.35
+
+## 3.7 maximum 
+data_summary[order(-data_summary$weighted_age),] %>% head()
+# I ordered the regions by mean age in descending order, so that the maximum mean ages will appear at the top. SSC20383, SSC20415, SSC22281, SSC22772 and SSC22873 are the regions with maximum mean age of 55.
+
+## 3.8 interquartile range is 5.92435 using the IQR function.
+IQR(data_summary$weighted_age)
+# This matches the IQR calculated by 3rd quartile - 1st quartile = 33.35 - 27.43 = 5.92
+
+## 3.9 histogram plot of the distribution of means from each region 
+data_summary$weighted_age %>% hist(col="dodgerblue3", xlab="Mean Age", main="Histogram of Mean Ages Per Region")
+```
+By using group_by function, we can find the mean age of the population grouped by region. Since the population is grouped together, we can find the mean age in a region with weighted.mean function, passing age as the weighted mean to be calculated and population giving weight to the age. I made a new dataframe so that the sorted regions have a column showing the mean age per region. With standard deviation we can use the same groupby method and parameters, but instead I take the weighted standard deviation with the Hmisc library. The minimum, maximum, quartiles and mean are all summary statistics that can be found passing summary() function into the dataframe containing region and mean age. To find regions with the largest and smallest mean ages, we order the weighted_age columns so that mean ages appear in descending and ascending orders respectively. Interquartile range is calculated using the IQR function, or by taking the difference between 3rd and 1st quartiles. From the histogram, we can observe that mean ages go up to 55. Most mean ages are above 20. The most common mean ages are in the bin 25-30, which lies within the interquartile range calculated.The distribution is symmetric with a shape close to the normal distribution. This agrees with the small difference (1.38) between the mean of 30.61 and median of 29.23. The split in the middle is around 28, but each side are not mirror images as the histogram shows slight left/negative skew with a longer tail leading to the left than the right.
+
+# Question 4: 
+ Consider the region with the smallest population: 
+
+
+```{r}
+#4.1 Show which region has the least people and how many it has. 
+datapop <- aggregate(data$population, by=list(RegionID=data$region), FUN=sum)
+names(datapop)[names(datapop) == 'x'] <- 'regionpop'
+datapop %>% head()
+datapop[order(datapop$regionpop),] %>% head()
+```
+Using the aggregate function, I can sum up population values that belong to the same region. I assigned results to a new data frame 'datapop', with the left RegionID column showing the region and right regionpop column showing the total population per region. Sorting the datapop data frame gives me the regions with total population per region in ascending order. Since there are many regions with the minimum population of 3 people, one such region is SSC20099.
+
+# Question 5:
+
+Consider the region with the largest population: 
+
+```{r}
+
+
+# 5.1 Plot the distribution of ages for the region with the most people.
+ 
+# find the region with the most people
+datapopmax <- datapop[order(-datapop$regionpop),]
+head(datapopmax)
+
+
+# plot probability mass function for region SSC22015
+
+# filter data to SSC22015
+large<- data %>% filter(region=="SSC22015")
+largepop <- aggregate(large$population, by=list(age_of_all=large$age), FUN=sum)
+
+# x is population for both males and females of that age, needs to be renamed, age_all is the age but has a different name to separate it from the original data. We need to make a new column showing the proportion of each population to the total population of that region.
+names(largepop)[names(largepop) == 'x'] <- 'population_by_age'
+largepop$prop <- largepop$population_by_age/sum(large$population)
+
+# bar plot plotting population proportion against age
+
+# plot using ggplot
+gg <- ggplot()
+gg <- gg + geom_rect(aes(xmin = 0, xmax = largepop$age_of_all, 
+                         ymin = 0, ymax = largepop$prop), 
+                     fill = "cornflowerblue")
+gg <- gg + labs(x = 'Age bins (years)', y = 'Probability density', title = "Age distribution for region SSC22015")
+gg
+# 5.2 Plot cumulative distribution for the regions with the most people.
+# calculate the cdf using the function cumsum
+largepop_cdf <- cumsum(largepop$prop)
+plot(largepop$age_of_all, largepop$cdf)
+uselater <- ggplot(aes(x=age_of_all, y=cdf), data=largepop) + geom_line() + labs(x="age bin", y="cumulative probability", title="Cumulative age distribution for SSC22015")
+
+# 5.3 Plot the cumulative distribution for males and females on the same plot.
+
+# calculate probabilities for each row in large
+large$prop <- large$population/sum(large$population)
+
+# plotting cdf for males and females on the same plot
+
+totalcdf <- ggplot(large, aes(age, cumsum(prop), colour=gender)) + geom_point() 
+print(totalcdf + ggtitle("Cumulative age distribution for males and females in SSC22015") +labs(y="cumulative probability", x = "Age (years)"))
+```
+I first need to find the region with the most people. This is done by ordering datapop dataframe in descending order. The region with the most people is SSC22015. To plot the age distribution for SSC22015 I need to calculate the proportion each row takes up in the total region population. This is done by summing up the subpopulations that have the same age regardless of gender, which are then divded by the total SSC22015 region population. ggplot allows plotting probability distribution against age bin, the proportion represents the probability. To plot the cumulative distribution of the ages with two different lines representing males and females, I plot the cumulative distribution by using cumsum on prop in the ''large'' dataframe, which shows the cumulative probability of each population proportion. Since the 'colour' parameter sorts the cumsum into the two genders, this plots two cdf for males and females onto the same plot.
+
+
+# Question 6:
+
+Provide an analysis of trends in age against region population: 
+ 
+```{r}
+# 6.1 Plot the ratio of old to young people using 40 years old as a cut off, i.e. young is defined as age < 40 and old as >= 40.
+
+# groupby region then aggregate young population
+region_young <- data %>% group_by(region) %>% filter(age < 40)
+region_young <- aggregate(region_young$population, by=list(region=region_young$region), FUN=sum)
+names(region_young)[names(region_young) == 'x'] <- 'young_total'
+# find proportion of young in region population
+region_young$region_total <- datapop$regionpop
+region_young$proportion <- region_young$young_total/region_young$region_total
+
+# groupby region then aggregate old population
+region_old <- data %>% group_by(region) %>% filter(age >= 40)
+region_old <- aggregate(region_old$population, by=list(region=region_old$region), FUN=sum)
+names(region_old)[names(region_old) == 'x'] <- 'old_total'
+# find proportion of young in region population
+region_old$region_total <- datapop$regionpop
+region_old$proportion <- region_old$old_total/region_old$region_total
+
+# compare the ratio between old and young per region
+region_old$ageratio <- region_old$proportion/region_young$proportion
+
+# plot old to young ratio against region population
+ageplot <- ggplot(aes(x=region_total, y=ageratio), data=region_old) + geom_line() + geom_hline(yintercept=1, alpha=0.3, linetype=2) + labs(x="region population", y="old to young ratio", title="Ratio plot showing how old:young ratio changes as region population increases")
+ageplot
+
+
+
+```
+I separated the population under 40 years and the population 40 years and above into two data.frames. I then aggregated the populations by region so I can calculate the proportion of old or young people per each region population. To determine the ratio I put the proportions as population age 40 or above divided by population age below 40. Plotting the ratio against region population shows how the number of old and young people changes as region population increases.
+
+**6.2** 
+Comment on any trends you see in the data. What could cause such trends? 
+
+[Answer 6.2 here: 40 years is used as the cutoff to determine young and old. Over 40 is old and under 40 is young. For small populations there is a disproportionately high number of old compared to young people. As the region population increases, the number of young compared to old people increases at a near-linear rate once the region population exceeds 20000 people. Immigration affects the proportions of age in more populated regions (Mcdonald, P., 2016). Since migrants to Australia tend to be younger, migrants such as Australian international students have the potential to contribute to the local workforce after they graduate, thus decreasing the over 40 years to under 40 years ratio slowing population ageing. The below 1:1 ratio for large populations can be explained by the median age being 29.23, which lies within the working-age population. These trends agree with the net overseas migration proportion of population being greater than natural increase from birth and death rates. There is also interstate migration by locals. Victoria is the second most populated Australian state and having the highest interstate migration population means that regions with high populations would have a lower old to young ratio, since young people tend to travel more than older people for work purposes (ABS, 2016).]
+
+# Question 7:
+ Provide an analysis of trends in gender ratio against region population: 
+
+```{r}
+# 7.1 Plot the gender ratio as a function of the population of the region. 
+
+# sum population of males in region
+
+# groupby region then aggregate gender population
+region_male <- data %>% group_by(region) %>% filter(gender == "M")
+region_male <- aggregate(region_male$population, by=list(region=region_male$region), FUN=sum)
+names(region_male)[names(region_male) == 'x'] <- 'male_total'
+# find proportion of males in region population
+region_male$region_total <- datapop$regionpop
+region_male$proportion <- region_male$male_total/region_male$region_total
+
+# sum population of females in region
+# groupby region then aggregate gender population
+region_females <- data %>% group_by(region) %>% filter(gender == "F")
+region_females <- aggregate(region_females$population, by=list(region=region_females$region), FUN=sum)
+names(region_females)[names(region_females) == 'x'] <- 'female_total'
+# find proportion of females in region population
+region_females$region_total <- datapop$regionpop
+region_females$proportion <- region_females$female_total/region_male$region_total
+
+# make a new table with region, regionpop and male to female ratio
+region_male$mfratio <- region_male$proportion/region_females$proportion
+# plot M:F ratio against region population
+gender <- ggplot(aes(x=region_total, y=mfratio), data=region_male) + geom_line() + geom_hline(yintercept=1, alpha=0.3, linetype=2) + labs(x="region population", y="male to female ratio", title="Ratio plot showing how M:F ratio changes as region population increases")
+gender
+
+
+```
+I separated the population of males and the population of females into two data.frames. I then aggregated the populations by region so I can calculate the proportion of male or female people per each region population. To determine the ratio I put the proportions as population of males divided by population of females. Plotting the ratio against region population shows how the number of males compared to females changes as region population increases.
+
+**7.2**
+Comment on any trends you see in the data. What could cause such trends? 
+
+[Answer 7.2 here: The lnf values from the region_male dataframe shows division by zero ie. regions with no females. For extremely small sample sizes division by zero resulting in ratios tending to infinity extremes occur because there are significantly more females or males than the opposite gender. When region population exceeds 10,000, the M:F ratio approaches 1:1 as indicated by the horizontal y-intercept line, representing an even distribution of males and females in the region. This could be due to the functionality of the smaller regions. For example, if the region is a science university or all boys' school it will have a disproportionately large number of males compared to females. Regions of matriarchal aboriginal societies with women as the head of the household could have the men originally from that region migrate to more populated regions for work, skewing the gender ratio to be less even in their region of origin, and more even for more populated regions. Some small regions could be in Western Australia that has many mining towns. These towns with low population would typically be populated with men only as they need to live near mining sites to carry out high labour work that women cannot physically carry out. Some small but sizeable regions could be correctional facilities that are single sex, again resulting in only women or men populating the respective regions causing a 'division by zero' situation or female population per region not being represented on the plot because they are at the origin. For example, as opposed to the mining towns there could be maternity hospitals in certain regions. Midwifes working in the area would be solely female.]
+
+
+# Question 8:
+Imagine you have enough resources for two events to launch a new product: 
+
+**8.1** 
+Select a gender and age group which spans 3 to 5 years. This will be the primary customers for your hypothetical product.  
+
+[Answer 8.1 here: Gender female. Age 25-30 to sell female sanitary pads. Although any female above puberty age would need female sanitary pads, the median and mean age is 29-30 which is most representative of the total Australian population, therefore it is more likely to have higher sales. For more populated regions there are also more people under 40 than people over 40, so targeting the age group above 40 is not a good idea, nor will they be using pads for as long due to reaching menopause. This age range is selected to ensure all the females in the Australian population have periods and have not already started committing to one brand for their sanitary needs, and are still more flexible to trying new products.]
+
+**8.2**
+Which two regions would you start with and why?
+
+[Answer 8.2 here: To answer this question I need to filter regions with the most females in the age range 25 to 30 years old. I need to aggregate the sum of females in age 25-30 age bin for each region. Ordering the population in descending order shows that regions SSC22015 has the greatest number of females in my target age group (2565), followed by SSC21143 with 1976.]
+```{r}
+eight <- data %>% group_by(region) %>% filter(gender=="F") %>% filter(age <= 30) %>% filter(age >= 25)
+eight <- aggregate(eight$population, by=list(region=eight$region), FUN=sum)
+names(eight)[names(eight) == 'x'] <- 'female_total'
+eight[order(-eight$female_total),] %>% head()
+```
+
+# Question 9.  
+
+Demonstrate the following: 
+
+```{r}
+
+# 9.1 The central limit theorem by selecting k = 100 samples of size n age values each from the cumulative distribution for the region with the most people (Q5.1). Hint: n is given in Q9.2
+# 9.2 Repeat this process for n = 1, 10, 100 and 1000 observations.
+# 9.3 Plot the resulting distribution along with a normal distribution, using the mean and standard deviation for each sample size given in Q9.2.
+
+
+# Question 9 for n=1
+# turn the largepop into a list of ages
+# this list is used as random ages for sampling
+age_list <- rep(c(largepop$age_of_all), times = largepop$population_by_age)
+
+# 9.1 sampling from cumulative distribution function
+# set seed so code is reproducible
+set.seed(123456)
+# make the sample
+n <- 1
+k <- 100
+# pick numbers from my age_list
+x_rand <- runif(n, age_list)
+x_cdf <- cumsum(x_rand) / sum(x_rand)
+
+# create loop to perform simulations
+for (i in 1:k) {
+# pick numbers from my age_list
+x_rand <- runif(n, age_list)
+# stores cdf in the data.frame
+x_cdf <- cumsum(x_rand) / sum(x_rand)
+}
+
+# pick numbers from my age_list
+x_rand <- runif(n, age_list)
+# stores cdf in the data.frame
+x_cdf <- cumsum(x_rand) / sum(x_rand)
+
+# generate cumulative distribution
+gg <- ggplot()
+gg <- gg + geom_line(aes(x=x_rand, y=x_cdf))
+gg <- gg + labs(x = "Age", y = "Cumulative distribution function")
+```
+
+
+```{r}
+# generate normal distribution based on age_list
+norm_data <- rnorm(
+  n = length(age_list), 
+  mean = mean(age_list),
+  sd = sd(age_list)
+)
+
+# compared with normal distribution curve
+gg <- ggplot()
+gg <- gg + geom_line(aes(x=x_rand, y=x_cdf))
+gg <- gg + labs(x = "Age", y = "Cumulative distribution function")
+gg <- gg + geom_density(aes(norm_data))
+gg
+```
+The cumulative distribution shows cumulative probability per region for age bin 0-0.7 is large. Due to the small sample size of 1 x 100 times of repeating the sample = 100 samples total, all the ages are clustered at age bin 0-1 to the left of the normal distribution derived from the list of ages in the most populated region.
+
+
+
+```{r}
+# Question 9 for n = 10
+# set seed so code is reproducible
+set.seed(123456)
+# make the sample
+n <- 10
+k <- 100
+
+# create loop to perform simulations
+for (i in 1:k) {
+# pick numbers from my age_list
+x_rand <- runif(n, age_list)
+# stores cdf in the data.frame
+x_cdf <- cumsum(x_rand) / sum(x_rand)
+}
+
+# pick numbers from my age_list
+x_rand <- runif(n, age_list)
+# stores cdf in the data.frame
+x_cdf <- cumsum(x_rand) / sum(x_rand)
+
+# generate cumulative distribution
+gg <- ggplot()
+gg <- gg + geom_line(aes(x=x_rand, y=x_cdf))
+gg <- gg + labs(x = "Age", y = "Cumulative distribution function")
+gg
+```
+
+```{r}
+# generate normal distribution based on age_list
+norm_data <- rnorm(
+  n = length(age_list), 
+  mean = mean(age_list),
+  sd = sd(age_list)
+)
+# compared with normal distribution curve
+gg <- ggplot()
+gg <- gg + geom_line(aes(x=x_rand, y=x_cdf))
+gg <- gg + labs(x = "Age", y = "Cumulative distribution function")
+gg <- gg + geom_density(aes(norm_data))
+gg
+
+```
+The cumulative distribution shows cumulative probability per region for age bin 0-0.7 is large. Due to the small sample size of 1 x 100 times of repeating the sample = 100 samples total, all the ages are clustered at age bin 0-1 to the left of the normal distribution derived from the list of ages in the most populated region.
+
+
+```{r}
+# Question 9 for n = 100
+# set seed so code is reproducible
+set.seed(123456)
+# make the sample
+n <- 100
+k <- 100
+
+# create loop to perform simulations
+for (i in 1:k) {
+# pick numbers from my age_list
+x_rand <- runif(n, age_list)
+# stores cdf in the data.frame
+x_cdf <- cumsum(x_rand) / sum(x_rand)
+}
+
+# pick numbers from my age_list
+x_rand <- runif(n, age_list)
+# stores cdf in the data.frame
+x_cdf <- cumsum(x_rand) / sum(x_rand)
+
+# generate cumulative distribution
+gg <- ggplot()
+gg <- gg + geom_line(aes(x=x_rand, y=x_cdf))
+gg <- gg + labs(x = "Age", y = "Cumulative distribution function")
+gg
+```
+
+```{r}
+# generate normal distribution based on age_list
+norm_data <- rnorm(
+  n = length(age_list), 
+  mean = mean(age_list),
+  sd = sd(age_list)
+)
+
+# compared with normal distribution curve
+gg <- ggplot()
+gg <- gg + geom_line(aes(x=x_rand, y=x_cdf))
+gg <- gg + labs(x = "Age", y = "Cumulative distribution function")
+gg <- gg + geom_density(aes(norm_data))
+gg
+```
+
+The sample size of 100 x 100 times of repeating the sample = 1000 samples total, we can see that the cumulative probabilities fluctuate a lot within the 0-1 age bin, but the cumulative distribution is still skewed at the age bin 0.
+
+```{r}
+# Question 9 for n = 1000
+# set seed so code is reproducible
+set.seed(123456)
+# make the sample
+n <- 1000
+k <- 100
+
+
+# create loop to perform simulations
+for (i in 1:k) {
+# pick numbers from my age_list
+x_rand <- runif(n, age_list)
+# stores cdf in the data.frame
+x_cdf <- cumsum(x_rand) / sum(x_rand)
+}
+
+# pick numbers from my age_list
+x_rand <- runif(n, age_list)
+# stores cdf in the data.frame
+x_cdf <- cumsum(x_rand) / sum(x_rand)
+
+# generate cumulative distribution
+gg <- ggplot()
+gg <- gg + geom_line(aes(x=x_rand, y=x_cdf))
+gg <- gg + labs(x = "Age", y = "Cumulative distribution function")
+gg
+```
+
+```{r}
+# generate normal distribution based on age_list
+norm_data <- rnorm(
+  n = length(age_list), 
+  mean = mean(age_list),
+  sd = sd(age_list)
+)
+
+# compared with normal distribution curve
+gg <- ggplot()
+gg <- gg + geom_line(aes(x=x_rand, y=x_cdf))
+gg <- gg + labs(x = "Age", y = "Cumulative distribution function")
+gg <- gg + geom_density(aes(norm_data))
+gg
+
+```
+
+The sample size of 1000 x 100 times of repeating the sample = 10000 samples total, we can see that the cumulative probabilities fluctuate even more and become more even within the 0-1 age bin, each peak at cumulative probability 0.25 to 0.75, but the cumulative distribution is still skewed at the age bin 0. I deduce that region SSC22015 is a gynaecological ward given the large number of children below 1 years old compared to the older age groups.
+
+
+# Summary 
+
+# References (if any)
+1. Robinson, F. (2016). Plotting with ggplot: : adding titles and axis names. Environmental Computing.
+http://environmentalcomputing.net/plotting-with-ggplot-adding-titles-and-axis-names/#:~:text=Changing%20axis%20labels,line%20of%20basic%20ggplot%20code.&text=Note%3A%20You%20can%20also%20use,which%20is%20equivalent%20to%20ggtitle%20. accessed 21/5/2021
+
+2. Mcdonald, P. (2016). Ch.4 Ageing in Australia: Population Changes and Responses. Population Ageing and Australia's Future. ANU Press. https://press-files.anu.edu.au/downloads/press/n2121/html/ch04.xhtml accessed 21/5/2021
+
+3. Australian Bureau of Statistics (2016). 3101.0 - Australian Demographic Statistics, Jun 2016.
+https://www.abs.gov.au/AUSSTATS/abs@.nsf/7d12b0f6763c78caca257061001cc588/2d2860dfa430d432ca2580eb001335bb!OpenDocument accessed 21/5/2021
+
+4. Baglin, J. (2020). Module 5 Sampling Randomly Representative. Applied Analytics. https://astral-theory-157510.appspot.com/secured/MATH1324_Module_05.html accessed 21/5/2021
+
+5. RMIT Online (2021). 3.1.3 Sampling from cumulative distribution function. MATH2406 Applied Analytics.
+
+6. RMIT Online (2021). 3.2.3 Demonstration of the CLT. MATH2406 Applied Analytics.
+
+7. Udacity (2015). Ratio Plot - Data Analysis with R. Youtube. https://www.youtube.com/watch?v=DclTt9xqS4s viewed 21/5/2021
+
+8. StackOverflow. Repeat the rows in a data frame based on values in a specific column [duplicate]. https://stackoverflow.com/questions/38499032/repeat-the-rows-in-a-data-frame-based-on-values-in-a-specific-column accessed 21/5/2021
+
+9. de Vries, A and Meys, J. How to Repeat Vectors in R. dummies. https://www.dummies.com/programming/r/how-to-repeat-vectors-in-r/#:~:text=In%20R%2C%20you%20can%20combine,repeating%20a%20vector%3A%20rep() accessed 21/5/2021
