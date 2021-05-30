@@ -1,0 +1,155 @@
+---
+title: "Module_6"
+author: "s3875793"
+date: "May 30, 2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r cars}
+# loading libraries
+library(dplyr)
+library(Hmisc)
+library(ggplot2)
+library(readxl)
+library(magrittr)
+```
+
+
+```{r}
+# load the dataset
+Pizza <- read_excel("Pizza.xlsx")
+head(Pizza)
+```
+
+```{r}
+# checking attributes
+names(Pizza)
+```
+
+
+```{r}
+Pizza %>% group_by(Store) %>% summarise(Min = min(Diameter,na.rm = TRUE),
+                                         Q1 = quantile(Diameter,probs = .25,na.rm = TRUE),
+                                         Median = median(Diameter, na.rm = TRUE),
+                                         Q3 = quantile(Diameter,probs = .75,na.rm = TRUE),
+                                         Max = max(Diameter,na.rm = TRUE),
+                                         Mean = mean(Diameter, na.rm = TRUE),
+                                         SD = sd(Diameter, na.rm = TRUE),
+                                         n = n(),
+                                         Missing = sum(is.na(Diameter)))
+```
+
+```{r}
+Pizza %>% histogram(~Diameter | Store, data = ., laytout=c(1,2))
+```
+
+We can see that the Dominos' distribution is bimodal. There is an extra variable affecting the pizza diameters- the type of crust
+
+```{r}
+Pizza %>% group_by(Store, Crust) %>% summarise(Min = min(Diameter,na.rm = TRUE),
+                                         Q1 = quantile(Diameter,probs = .25,na.rm = TRUE),
+                                         Median = median(Diameter, na.rm = TRUE),
+                                         Q3 = quantile(Diameter,probs = .75,na.rm = TRUE),
+                                         Max = max(Diameter,na.rm = TRUE),
+                                         Mean = mean(Diameter, na.rm = TRUE),
+                                         SD = sd(Diameter, na.rm = TRUE),
+                                         n = n(),
+                                         Missing = sum(is.na(Diameter)))
+
+```
+
+```{r}
+Pizza %>% histogram(~Diameter | Store + Crust, data = ., laytout=c(1,2))
+
+
+```
+
+Use a box plot to detect outliers by lower and upper quartile and 1.5*IQR formula
+```{r}
+Pizza_thin <- Pizza %>% filter(Crust == "Thin")
+
+Pizza_thin %>% group_by(Store) %>% summarise(Min = min(Diameter,na.rm = TRUE),
+                                         Q1 = quantile(Diameter,probs = .25,na.rm = TRUE),
+                                         Median = median(Diameter, na.rm = TRUE),
+                                         Q3 = quantile(Diameter,probs = .75,na.rm = TRUE),
+                                         Max = max(Diameter,na.rm = TRUE),
+                                         Mean = mean(Diameter, na.rm = TRUE),
+                                         SD = sd(Diameter, na.rm = TRUE),
+                                         n = n(),
+                                         Missing = sum(is.na(Diameter)))
+
+Pizza_thin %>% boxplot(Diameter ~ Store, data = .)
+
+```
+
+```{r}
+# boxplot with outliers filtered out
+boxplot <- Pizza_thin %>% boxplot(Diameter ~ Store, data=., plot=FALSE)
+
+# matrix taking into account outlier formula
+Filt_mat <- data.frame(group = boxplot$group, outliers = boxplot$out)
+Filt_mat$group <- Filt_mat$group %>% factor(levels = c(1,2), 
+                                            labels = c("Dominos","EagleBoys"))
+Filt_mat
+
+```
+
+```{r}
+Pizza_thin_filter <- Pizza_thin %>% filter(!(Store %in% Filt_mat$group)
+                                           | !(Diameter %in% Filt_mat$outliers))
+
+Pizza_thin_filter %>% boxplot(Diameter ~ Store, data=., main= "Thin Pizza Diameter with outliers removed", ylab="Diameter in cm")
+
+```
+
+Using T-test on the pizza data since population standard deviation is unknown for large datasets
+
+```{r}
+# load the data
+Pizza_thin_filter %>% group_by(Store) %>% summarise(Min = min(Diameter,na.rm = TRUE),
+                                         Q1 = quantile(Diameter,probs = .25,na.rm = TRUE),
+                                         Median = median(Diameter, na.rm = TRUE),
+                                         Q3 = quantile(Diameter,probs = .75,na.rm = TRUE),
+                                         Max = max(Diameter,na.rm = TRUE),
+                                         Mean = mean(Diameter, na.rm = TRUE),
+                                         SD = sd(Diameter, na.rm = TRUE),
+                                         n = n(),
+                                         Missing = sum(is.na(Diameter)))
+
+```
+
+```{r}
+Pizza_thin_filter %>% group_by(Store) %>% summarise(Mean = round(mean(Diameter, na.rm = TRUE),2),
+                                                  SD = round(sd(Diameter, na.rm = TRUE),3),
+                                                  n = n(),
+                                                  tcrit = round(qt(p = 0.975, df = n - 1),3),
+                                                  SE = round(SD/sqrt(n),3),
+                                                  `95% CI Lower Bound` = round(Mean - tcrit * SE,2),
+                                                  `95% CI Upper Bound` = round(Mean + tcrit * SE,2))
+
+```
+
+Do t-test on higher confidence intervals so that the true population mean is more likely to be included
+```{r}
+Dominos <- Pizza_thin_filter %>% filter(Store == "Dominos")
+t.test(Dominos$Diameter, conf.level=0.99)
+```
+
+```{r}
+EagleBoys <- Pizza_thin_filter %>% filter(Store == "EagleBoys")
+t.test(EagleBoys$Diameter, conf.level=0.99)
+```
+
+Let's plot the confidence intervals against the data with p value = 0.05 (confidence interval is 0.95, not the same as the t test used)
+```{r}
+p1 <- ggplot(data = Pizza_thin_filter, aes(x = Store, y = Diameter))
+p1 + geom_dotplot(binaxis = "y", stackdir = "center", dotsize = 1/2, alpha = .25) + 
+  stat_summary(fun = "mean", geom = "point", colour = "red") +
+  stat_summary(fun.data = "mean_cl_normal", colour = "red", 
+               geom = "errorbar", width = .2)
+
+```
