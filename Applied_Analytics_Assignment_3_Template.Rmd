@@ -1,0 +1,323 @@
+---
+title: "Assignment 3 Rmarkdown"
+author: "Elizabeth Chan s3875793"
+date: "Last updated: 17 June 2021`"
+---
+
+```{r setup, include=FALSE}
+# Use this chunk to quietly load your pacakges
+
+knitr::opts_chunk$set(
+	fig.align = "center",
+	message = FALSE,
+	warning = FALSE
+)
+# Packages loaded in this chunk will not appear in the presentation. 
+
+library(ggplot2) # Useful for creating plots
+library(dplyr)  # Useful for data maipulation
+library(knitr) # Useful for creating nice tables
+library(magrittr) # piping
+library(Hmisc)
+library(readr)    # For reading data 
+library(tidyr)    # For manipulating data columns 
+library(car)      # hypothesis testing
+library(lattice)
+library(tidyr)
+library(plot3D) # to plot complex visualisations
+
+```
+
+```{r}
+# load files
+streaming <- read.csv("streaming_data.csv")
+# preview first 5 rows of data 
+head(streaming)
+```
+
+# Pearson correlation coefficient 
+```{r}
+# Data Exploration
+# compare hours_watched, social_metric and group
+int_breaks_rounded <- function(x, n = 10) pretty(x, n)[round(pretty(x, n), 1) %% 1 == 0]
+
+gg <- ggplot()
+gg <- gg + geom_point(position = position_jitter(width = 0.45,
+                                                 height = 0.45), 
+                      aes(x = streaming$social_metric,
+                          y = streaming$hours_watched,
+                          colour = factor(streaming$group)))
+gg <- gg + scale_y_continuous(breaks = int_breaks_rounded )
+gg <- gg + labs(x = 'Social metric', y = 'Hours watched',
+                colour = 'Treatment/Control')
+gg
+```
+```{r}
+# filter streaming data by group
+control <- streaming %>% filter(group=="A")
+treatment <- streaming %>% filter(group=="B")
+
+# Pearson correlation coeffecient for control and treatment
+social_coeff_A <- cov(control$social_metric, control$hours_watched) / (sd(control$social_metric)*sd(control$hours_watched))
+social_coeff_A
+social_coeff_B <- cov(treatment$social_metric, treatment$hours_watched) / (sd(treatment$social_metric)*sd(treatment$hours_watched))
+social_coeff_B
+
+```
+There is weak positive correlation for both treatment and control. The correlation between hours watched and social metric is slightly stronger for the treatment group than the control group.
+
+We cannot perform any hypothesis testing yet because we need to check if the sampling collection data is biased or not.
+
+
+Repeat these scatter plots for the other columns, date, age, time since signup, demographic. Since gender is a categorical variable, we cannot determine a correlation between gender and hours watched nor perform linear regression on it.
+
+```{r}
+# compare hours_watched, age and group
+int_breaks_rounded <- function(x, n = 10) pretty(x, n)[round(pretty(x, n), 1) %% 1 == 0]
+
+gg <- ggplot()
+gg <- gg + geom_point(position = position_jitter(width = 0.45,
+                                                 height = 0.45), 
+                      aes(x = streaming$age,
+                          y = streaming$hours_watched,
+                          colour = factor(streaming$group)))
+gg <- gg + scale_y_continuous(breaks = int_breaks_rounded )
+gg <- gg + labs(x = 'Age (years)', y = 'Hours watched',
+                colour = 'Treatment/Control')
+gg
+
+```
+We observe a linear negative correlation. As age increases, the hours watched decreases. The r values agree with this, but the correlation between age and hours watched is weak, even though age has a larger correlation with hours watched than social metric.
+
+Compare the correlation coefficients between treatment and control
+```{r}
+# Pearson correlation coeffecients for control and treatment
+age_coeff_A <- cov(control$age, control$hours_watched) / (sd(control$age)*sd(control$hours_watched))
+age_coeff_A
+age_coeff_B <- cov(treatment$age, treatment$hours_watched) / (sd(treatment$age)*sd(treatment$hours_watched))
+age_coeff_B
+```
+
+```
+
+
+```{r}
+# compare hours_watched, demographic and group
+int_breaks_rounded <- function(x, n = 10) pretty(x, n)[round(pretty(x, n), 1) %% 1 == 0]
+
+gg <- ggplot()
+gg <- gg + geom_point(position = position_jitter(width = 0.45,
+                                                 height = 0.45), 
+                      aes(x = streaming$demographic,
+                          y = streaming$hours_watched,
+                          colour = factor(streaming$group)))
+gg <- gg + scale_y_continuous(breaks = int_breaks_rounded )
+gg <- gg + labs(x = 'Demographic', y = 'Hours watched',
+                colour = 'Treatment/Control')
+gg
+
+```
+
+```{r}
+# Pearson correlation coeffecients for control and treatment
+demographic_coeff_A <- cov(control$demographic, control$hours_watched) / (sd(control$demographic)*sd(control$hours_watched))
+demographic_coeff_A
+demographic_coeff_B <- cov(treatment$demographic, treatment$hours_watched) / (sd(treatment$demographic)*sd(treatment$hours_watched))
+demographic_coeff_B
+```
+
+
+
+```{r}
+# compare hours_watched, time_since_signup and group
+int_breaks_rounded <- function(x, n = 10) pretty(x, n)[round(pretty(x, n), 1) %% 1 == 0]
+
+gg <- ggplot()
+gg <- gg + geom_point(position = position_jitter(width = 0.45,
+                                                 height = 0.45), 
+                      aes(x = streaming$time_since_signup,
+                          y = streaming$hours_watched,
+                          colour = factor(streaming$group)))
+gg <- gg + scale_y_continuous(breaks = int_breaks_rounded )
+gg <- gg + labs(x = 'Time since signup', y = 'Hours watched',
+                colour = 'Treatment/Control')
+gg
+
+```
+
+```{r}
+# Pearson correlation coeffecients for control and treatment
+time_since_signup_coeff_A <- cov(control$time_since_signup, control$hours_watched) / (sd(control$time_since_signup)*sd(control$hours_watched))
+time_since_signup_coeff_A
+time_since_signup_coeff_B <- cov(treatment$time_since_signup, treatment$hours_watched) / (sd(treatment$time_since_signup)*sd(treatment$hours_watched))
+time_since_signup_coeff_B
+```
+
+## Multidimensional visualisation. I decided to pick age and demographic as the two independent variables to show relationship with hours watched because they both have negative correlation with dependent variable hours watched, whereas social metric is a positive correlation.
+```{r}
+x <- streaming$age 
+y <- streaming$hours_watched
+z <- streaming$demographic
+
+scatter3D(x, y, z, clab = c("x=Age(Years)", "y=Hours Watched", "z=Demographic"))
+```
+
+# Multiple regression 
+```{r}
+reg_model_control <- lm(control$hours_watched ~ control$age + control$demographic + control$social_metric)
+summary(reg_model_control)
+reg_model_treatment <- lm(treatment$hours_watched ~ treatment$age + treatment$demographic + treatment$social_metric)
+summary(reg_model_treatment)
+```
+
+
+
+# Check group balances
+We want to see if the groups in the data are biased or not because we did not collect the data themselves. They should represent the total population and be normally distributed. If the intervention of giving the new recommendation engine worked then we should see a higher increase in hours watched comparing hours watched before 18/7 and after 18/7 for  group B than group A. 
+
+
+Compare hours watched for the treatment and control groups to see if the hours watched have increased more.
+```{r}
+a_df <- streaming %>% filter(group == 'A')
+b_df <- streaming %>% filter(group == 'B')
+mean(a_df$hours_watched)
+mean(b_df$hours_watched)
+```
+The mean value for hours watched is 4.810875 - 4.336125 = 0.475 for the treatment than the control group.
+
+# Examine effect size
+```{r}
+print('hours watched breakdown:')
+cond_A <- streaming$group == 'A'
+print(paste('A:', sum(streaming$hours_watched[cond_A]) / sum(cond_A)))
+cond_B <- streaming$group == 'B'
+print(paste('B:', sum(streaming$hours_watched[cond_B]) / sum(cond_A)))
+effect <- sum(streaming$hours_watched[cond_B]) / sum(cond_A) - sum(streaming$hours_watched[cond_A]) / sum(cond_A)
+effect
+```
+
+# use this to calculate the minimum sample size 
+```{r n_ss}
+# calculate the standard error for hours_watched
+hours <- streaming$hours_watched
+#create function for standard error calculation
+se <- function(x) sqrt(var(x)/length(x))
+z_alpha <- 1.96
+n_ss <- ceiling((z_alpha * se(hours)/ effect)^2)
+print(paste('Min sample size', n_ss))
+```
+
+So the smallest group that we can expect to be able to get statistically significant results from in the analysis of this A/B test has at least 1 members.
+
+```{r check_groups}
+# count the numbers in each demographic category based on the A/B group for the ones we are interested in - that have a correlation
+check_a_df <- streaming %>% 
+  filter(group == 'A') %>% 
+  select(age, social_metric, demographic) %>% 
+  group_by(age, social_metric, demographic) %>% 
+  mutate(n_a = n()) %>% 
+  distinct()
+
+check_b_df <- streaming %>% 
+  filter(group == 'B') %>% 
+  select(age, social_metric, demographic) %>% 
+  group_by(age, social_metric, demographic) %>% 
+  mutate(n_b = n()) %>% 
+  distinct()
+
+# total numbers in each group
+n_total_a <- sum(streaming$group == 'A')
+n_total_b <- sum(streaming$group == 'B')
+
+# proportions in each demographic
+check_a_df$p_a <- check_a_df$n_a / n_total_a
+check_b_df$p_b <- check_b_df$n_b / n_total_b
+# join on demo categories
+check_df <- inner_join(check_a_df, check_b_df)
+check_df
+```
+
+```{r}
+#check with visualisation
+check_df$ID <- seq.int(nrow(check_df))
+
+library(tidyr)
+plot_df <- check_df %>% pivot_longer(c(p_a, p_b), "group", "probability")
+plot_df
+
+ggplot() + geom_col(aes(x=plot_df$ID, y=plot_df$value, fill=plot_df$group), position = "dodge")
+```
+
+
+## using qqplot
+```{r}
+# calculate the difference in proportions
+check_df$diff <- check_df$p_b - check_df$p_a
+# if there is no bias aside from sampling noise then the difference should be small and normally distributed
+qqnorm(y = check_df$diff)
+```
+
+
+I will double check for sample bias with Chi-square test of goodness of fit. We need to compare the proportions between A and B which are within the demographics in the rows to make sure they are the same. Test for each group if the mean values for proportions for control and treatment are the same. We can assume control group (A) as the observed values whereas treatment group (B) would be the expected values.
+```{r}
+n <- ncol(check_df$p_b)
+obs <- check_df$p_b 
+expected_vec <- check_df$p_a
+# to find the chi-squared statistic
+chindependence <- sum((obs-expected_vec)^2/expected_vec)
+# find the p value
+pchisq(q = chindependence, df = 3, lower.tail = FALSE)
+```
+
+The chi-squared goodness of fit gives a p-value of 0.554 , which means that we fail to reject the null hypothesis that the samples are biased, meaning the proportions for the groups are the same. This conflicts with the qqplot and visualisations. I will assume the sample is biased.
+
+
+# Examine the effect size for each row
+```{r}
+# prepare data for group A
+g_a <- streaming %>% 
+  filter(group == 'A') %>% 
+  ungroup() %>% 
+  select(age, social_metric, demographic, hours_watched) %>% 
+  group_by(age, social_metric, demographic) %>%
+  mutate(n_a = n(), n_a_o = sum(hours_watched)) %>% 
+  select(age, social_metric, demographic, n_a, n_a_o) %>%
+  distinct()
+
+g_a$p_a <- g_a$n_a_o / g_a$n_a
+
+g_b <- streaming %>% 
+  filter(group == 'B') %>% 
+  ungroup() %>% 
+  select(age, social_metric, demographic, hours_watched) %>% 
+  group_by(age, social_metric, demographic) %>%
+  mutate(n_b = n(), n_b_o = sum(hours_watched)) %>% 
+  select(age, social_metric, demographic, n_b, n_b_o) %>%
+  distinct()
+
+g_b$p_b <- g_b$n_b_o / g_b$n_b
+
+# effect comparison: join on all common column names
+effect_comp_df <- inner_join(g_a, g_b)
+
+effect_comp_df$effect <- effect_comp_df$p_b - effect_comp_df$p_a
+
+# required sample size
+z_alpha <- 1.96
+effect_comp_df$n_ss <- (z_alpha * se(hours) / effect_comp_df$effect)^2
+effect_comp_df$significant <- effect_comp_df$n_a > effect_comp_df$n_ss
+
+```
+
+```{r}
+# filter out the positive effect
+good <- effect_comp_df %>% filter(effect> 0)
+head(good)
+
+```
+
+```{r}
+# filter out negative effect
+bad <- effect_comp_df %>% filter(effect<= 0)
+head(bad)
+```
