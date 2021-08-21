@@ -1,0 +1,160 @@
+---
+title: "Foory Nutrient Helper"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: rows
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(ggplot2)
+library(dplyr)
+library(plotly)
+library(readr)
+
+food <- read_csv("food.csv")
+calories <- na.omit(food, cols = "Calories")
+calories <- calories[order(calories$Calories),]
+calories_least <- head(calories, 50)
+calories_most <- tail(calories, 50)
+    
+# foods appear in ascending order of glucose
+glucose <- na.omit(food, cols = "Glucose")
+glucose <- glucose[order(glucose$Glucose),]
+glucose_most <- tail(glucose, 50)
+    
+    
+# foods appear in ascending order of fat
+fat <- na.omit(food, cols = "Fat")
+fat <- fat[order(fat$Fat),]
+fat_most <- tail(fat, 50)
+    
+    
+# order data so that foods appear in descending order of protein
+protein <- na.omit(food, cols = "Protein")
+protein <- protein[order(-protein$Protein),]
+protein_most <- head(protein, 50)
+
+# foods appear in descending order of fibre
+fibre <- na.omit(food, cols = "Fibre")
+fibre <- fat[order(-fibre$Fibre),]
+fibre_most <- head(fibre, 50)
+```
+
+Row {.tabset}
+-----------------------------------------------------------------------
+
+### Highest Calories
+
+```{r}
+# bar chart for most calories
+calories_most$Food <- factor(calories_most$Food, levels = calories_most$Food[order(calories_most$Calories)])
+
+calplot2 <- ggplot(calories_most, aes(y = Food, x = Calories))
+calplot2 <- calplot2 + geom_point(colour = "#fc8d59") +
+  geom_segment(aes(x = 0, y = Food, xend = Calories,yend=Food),linetype = 1, size = 1.4, colour = "#fc8d59") +
+  labs(x = "Calories (kJ)",
+       y = "Food Name") + geom_text(aes(label=round(Calories,2)), hjust = -1,size = 3, colour = "black") + scale_x_continuous() + scale_y_discrete(label = function(y) stringr::str_trunc(y, 20)) 
+# make background white, remove redundant colour legend and tick marks
+calplot2 <- calplot2 + theme_classic() + theme(legend.position = "none") + theme(axis.ticks=element_blank()) 
+
+calplot2 <- ggplotly(calplot2)
+calplot2
+```
+
+### Lowest Calories
+
+```{r}
+# order bar chart by ascending order 
+calories_least$Food <- factor(calories_least$Food, levels = calories_least$Food[order(-calories_least$Calories)])
+
+calplot <- ggplot(calories_least, aes(y = Food, x = Calories))
+calplot <- calplot + geom_point(colour = "#99d594") +
+  geom_segment(aes(x = 0, y = Food, xend = Calories,yend=Food),linetype = 1, size = 1.4, colour = "#99d594") +
+  labs(x = "Calories (kJ)",
+       y = "Food Name") + geom_text(aes(label=round(Calories,2)), hjust = -1,size = 3, colour = "black") + scale_x_continuous() + scale_y_discrete(label = function(y) stringr::str_trunc(y, 20)) 
+# make background white, remove redundant colour legend and tick marks
+calplot <- calplot + theme_classic() + theme(legend.position = "none") + theme(axis.ticks=element_blank()) 
+
+calplot <- ggplotly(calplot)
+calplot
+```
+
+
+### Highest Protein
+
+```{r}
+# bar chart for most protein
+# order bar chart by ascending order 
+protein_most$Food <- factor(protein_most$Food, levels = protein_most$Food[order(protein_most$Protein)])
+
+proplot <- ggplot(protein_most, aes(y = Food, x = Protein))
+proplot <- proplot + geom_point(colour = "#99d594") +
+  geom_segment(aes(x = 0, y = Food, xend = Protein,yend=Food),linetype = 1, size = 1.4, colour = "#99d594") +labs(x = "Protein (g)",
+       y = "Food Name") + geom_text(aes(label=round(Protein,2)), hjust = -1,size = 3, colour = "black") + scale_x_continuous() + scale_y_discrete(label = function(y) stringr::str_trunc(y, 20)) 
+# make background white, remove redundant colour legend and tick marks
+proplot <- proplot + theme_classic() + theme(legend.position = "none") + theme(axis.ticks=element_blank()) 
+
+proplot <- ggplotly(proplot)
+proplot
+```
+
+### Highest Fat
+
+```{r}
+# bar chart for most fat
+fat_most$Food <- factor(fat_most$Food, levels = fat_most$Food[order(fat_most$Fat)])
+
+fatplot2 <- ggplot(fat_most, aes(y = Food, x = Fat))
+fatplot2 <- fatplot2 + geom_point(colour = "#fc8d59") +
+  geom_segment(aes(x = 0, y = Food, xend = Fat,yend=Food),linetype = 1, size = 1.4, colour = "#fc8d59") +
+  labs(x = "Calories (kJ)",
+       y = "Food Name") + geom_text(aes(label=round(Fat,2)), hjust = -1,size = 3, colour = "black") + scale_x_continuous() + scale_y_discrete(label = function(y) stringr::str_trunc(y, 20)) 
+# make background white, remove redundant colour legend and tick marks
+fatplot2 <- fatplot2 + theme_classic() + theme(legend.position = "none") + theme(axis.ticks=element_blank()) 
+
+fatplot2 <- ggplotly(fatplot2)
+fatplot2
+```
+
+### Highest Fibre
+
+```{r}
+# bar chart for most fibre
+fibre_most$Food <- factor(fibre_most$Food, levels = fibre_most$Food[order(fibre_most$Fibre)])
+
+# highlight outlier
+highlight_df <- fibre_most %>% 
+             filter(Fibre>=20)
+
+fibplot <- ggplot(fibre_most, aes(y = Food, x = Fibre))
+fibplot <- fibplot + geom_point(colour = "#99d594") +
+  geom_segment(aes(x = 0, y = Food, xend = Fibre,yend=Food),linetype = 1, size = 1.4, colour = "#99d594") +
+  labs(x = "Fibre (g)",
+       y = "Food Name") + geom_text(aes(label=round(Fibre,2)), hjust = -1,size = 3, colour = "black") + scale_x_continuous() + scale_y_discrete(label = function(y) stringr::str_trunc(y, 20)) 
+fibplot <- fibplot + geom_point(data=highlight_df, aes(y = Food, x = Fibre), colour="#e9a3c9") + geom_segment(data= highlight_df, aes(x = 0, y = Food, xend = Fibre,yend=Food),linetype = 1, size = 1.4, colour = "#e9a3c9") 
+# make background white, remove redundant colour legend and tick marks
+fibplot <- fibplot + theme_classic() + theme(legend.position = "none") + theme(axis.ticks=element_blank()) 
+
+fibplot <- ggplotly(fibplot)
+fibplot
+```
+
+### Highest Sugar
+
+```{r}
+# bar chart for most glucose
+glucose_most$Food <- factor(glucose_most$Food, levels = glucose_most$Food[order(glucose_most$Glucose)])
+
+gluplot2 <- ggplot(glucose_most, aes(y = Food, x = Glucose))
+gluplot2 <- gluplot2 + geom_point(colour = "#fc8d59") +
+  geom_segment(aes(x = 0, y = Food, xend = Glucose,yend=Food),linetype = 1, size = 1.4, colour = "#fc8d59") +
+  labs(x = "Sugar (g)",
+       y = "Food Name") + geom_text(aes(label=round(Glucose,2)), hjust = -1,size = 3, colour = "black") + scale_x_continuous() + scale_y_discrete(label = function(y) stringr::str_trunc(y, 20)) 
+# make background white, remove redundant colour legend and tick marks
+gluplot2 <- gluplot2 + theme_classic() + theme(legend.position = "none") + theme(axis.ticks=element_blank()) 
+
+gluplot2 <- ggplotly(gluplot2)
+gluplot2
+```
