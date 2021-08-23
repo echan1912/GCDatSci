@@ -1,0 +1,184 @@
+---
+title: "Assignment 2"
+subtitle: "Deconstruct, Reconstruct Web Report"
+author: "Elizabeth Chan (S3875793)"
+output: html_document
+urlcolor: blue
+---
+### {.tabset} 
+
+```{r setup, include=FALSE}
+# Do not change these settings!
+knitr::opts_chunk$set(warning = FALSE, message = FALSE)
+```
+
+Click the **Original**, **Code** and **Reconstruction** tabs to read
+about the issues and how they were fixed.
+
+#### Original
+
+<br>
+
+<center>
+
+<img src="MO_Barchart.jpg" width="80%"/>
+
+</center>
+
+<center>
+
+*Source: Mike Bostock (2019), author's Twitter and code on Observable
+website*
+
+</center>
+
+<br>
+
+**Objective**
+
+The original visualisation shows the numbers of H1-B visa-sponsored jobs of employers across sectors in the United States in the fiscal year October 1st 2018 to September 30th 2019 recording when an H1-B application is approved or denied (U.S. Citizenship and Immigration Services 2019). The area of bubbles represents the numerical values of submitted visa applications. Bubbles are grouped by state and city (Bostock, M 2019).
+
+H-1B visas are used by US employers seeking to hire nonimmigrants for 3-6 years as workers in speciality occupations that require at least a Bachelor's degree. These occupations are roles that America is in shortage of, including Silicon Valley jobs. In 2018, which includes some of the months during the fiscal year of the data source used in the visualisation, there is high demand for foreign talent with 472,000 unfilled software engineering positions (Mukherjee, R. 2018).
+
+The target audience is highly educated non-American nationals in fields where the US has shortages, for example, international students with high GPAs that graduated from American universities. Since it can be difficult to find a company willing to hire with an H1-B visa that is expensive and time-consuming to approve, knowing which industries are more likely to sponsor is valuable to foreign students that wish to continue working in the US after their student visa expires or noncitizen experts seeking short-term employment.
+
+
+
+The visualisation chosen had the following three main issues:
+
+-   **Deceptive area** - The packed bubble chart displays data as clusters. The area, labels and colour represent three different data columns (Tableau, 2021). In this example, area displays the number of submitted visas; labels display the employer names. The clusters represent different states and the bubbles are different employers. It is hard for the audience to compare similar numbers accurately for the State and City variables because smaller differences are harder to perceive. Area is a main visual variable that is harder to perceive than positions on axes as there is no aligned baseline (Baglin, J. 2020).
+
+    
+-   **Irresponsible use of colour** - Colour should represent another
+    column (Tableau 2021), but it has no clear meaning. The colour
+    scheme seems to be a default colouring. The action colour that
+    guides the viewer to the bubbles, the key message, is yellow. The
+    background is less important than the bubbles so should be in a
+    muted colour, but is in red which is a brighter colour drawing
+    attention to the viewer more than yellow. The bubbles are all in the
+    same hue, making it hard to compare employers that submit different
+    numbers of visas. The colour is not legible when printed in black
+    and white (Evergreen, S. et al 2016).
+
+    
+-   **Visual bombardment** - There is no order to the data, the
+    visualisation is not accessible and the audience cannot focus on the
+    key message. There is a lot of data that could have been faceted.
+    The labels cannot be read, and some labels overlap with other
+    bubbles. There are so many yellow circles that the small ones seem
+    to merge with the red background and appear orange (Baglin, J.
+    2020).
+
+
+**Reference**
+
+-   Mukherjee, R. (2018). *Silicon Valley: Trends in Hiring 2018.*
+    Retrieved July 30th, 2021, from Indeed For Employers website:
+    <https://www.indeed.com/lead/silicon-valley-trends-2018>
+-   <https://aptitive.com/blog/3-data-visualization-best-practices-that-uncover-hidden-patterns/>
+-   Bostock, M. (2019). *"2019 H-1B employers by state and city, sized
+    by number of submitted petitions."* Retrieved July 30th, 2021, from
+    Twitter: <https://twitter.com/mbostock/status/1112897963427164161>
+-   Bostock, M. (2019). 2019 H-1B Employers. Retrieved July 30th, 2021,
+    from Observable website:
+    [https://observablehq.com/\@mbostock/2019-h-1b-employers](https://observablehq.com/@mbostock/2019-h-1b-employers)
+-   Baglin, J. (2020). *Data Visualisation: From Theory to Practice.*
+    Retrieved July 30th, 2021 from
+    <https://dark-star-161610.appspot.com/secured/_book/index.html>
+-   U.S. Citizenship and Immigration Services (2019). Understanding Our
+    H-1B Employer Data Hub, H-1B Employer Data Hub. Retrieved July 30th,
+    2021 from
+    <https://www.uscis.gov/tools/reports-and-studies/h-1b-employer-data-hub/understanding-our-h-1b-employer-data-hub>
+-   Tableau (2021). Build a Packed Bubble Chart, Tableau Desktop and Web
+    Authoring Help. Retrieved July 30th, 2021 from
+    <https://help.tableau.com/current/pro/desktop/en-us/buildexamples_bubbles.htm>
+-   Evergreen, S., Sanjines, S.P. and Lyons, J. (2016). Stephanie
+    Evergreen Data Visualization Checklist, Evergreen Data Intentional
+    Reporting & Data Visualization website. Retrieved July 30th, 2021
+    from <https://stephanieevergreen.com/data-visualization-checklist/>
+
+#### Code
+
+The following code was used to fix the issues identified in the
+original.
+
+```{r}
+# loading libraries
+library(ggplot2)
+library(dplyr)
+```
+
+```{r}
+# loading dataset
+data <- read.csv("h-1b-data-export.csv")
+# view first few rows of data
+head(data)
+```
+```{r}
+# define factors for meaningful string variables so they can be ordered
+data$Employer <- as.factor(data$Employer)
+data$State <- as.factor(data$State)
+data$NAICS <- as.factor(data$NAICS)
+# check classes correctly defined
+class(data$Employer)
+class(data$State)
+class(data$NAICS)
+# check levels of NAICS
+levels(data$NAICS)
+# reorder levels in NAICS with meaningful labels. treat as factors because NAICS is a nominal variable indicating industry.
+data$NAICS <- data$NAICS %>% factor(levels=c(11, 21, 22, 23, 31, 32, 33, 42, 44, 45, 48, 49, 51, 52, 53, 54, 55, 56, 61, 62, 71, 72, 81, 92, 99), labels = c("Agriculture, Forestry", "Mining", "Utilities", "Construction", "Manufacturing", "Manufacturing", "Manufacturing", "Wholesales", "Retail", "Retail", "Transportation, Logistics", "Transportation, Logistics", "Information", "Finance", "Real Estate", "STEM", "Management", "Administration, Waste Management", "Education", "Health and Social Care", "Arts and Recreation", "Accommodation, Food", "Other", "Public Administration", "Nonclassifiable"), ordered = TRUE)
+
+# assign new name for NAICS column so it is less confusing for viewer
+names(data)[names(data) == 'NAICS'] <- 'Job.Sector'
+# sum up initial approval, initial denial, continuing approval and continuing denial variables into a new variable
+data$Number.of.Visas <- data$Initial.Approval + data$Initial.Denial + data$Continuing.Approval + data$Continuing.Denial
+
+# group employers by State and Job Sector
+EmployerStateJob <- data %>% group_by(across(c("State","Job.Sector"))) %>% summarize(Number.of.Visas = sum(Number.of.Visas))
+
+# want to remove the first 4 rows because they contain blanks (not treated as missing values by R). the number of visas is only a few so should not affect statistics of the visualisation
+EmployerStateJob <- EmployerStateJob[-c(1,2,3,4), ]
+
+# check data correctly grouped
+head(EmployerStateJob)
+
+# faceting into States results in visual bombardment, further condense into Job Sectors and Number of Visas only
+VisaPerSector <- EmployerStateJob %>% group_by(Job.Sector) %>% summarise(Number.of.Visas = sum(Number.of.Visas))
+
+# order data so that Job Sectors appear in descending order of Number of Visas
+VisaPerSector$Job.Sector <- factor(VisaPerSector$Job.Sector, levels = VisaPerSector$Job.Sector[order(VisaPerSector$Number.of.Visas)])
+```
+
+```{r}
+# univariate dot plot for Job Sector and Number of Visas
+
+# Different colour used for STEM than the rest of the data points with colour-blind friendly palette
+
+p1 <- ggplot(VisaPerSector, aes(y = Job.Sector, x = Number.of.Visas, colour = Number.of.Visas))
+p1 <- p1 + geom_point() +
+  geom_segment(aes(x = 0, y = Job.Sector, xend = Number.of.Visas,yend=Job.Sector),linetype = 2, size = 1.4) +
+  labs(title = "Number of H1-B Visas Sponsored by US\nEmployers Sorted by Job Sector",
+       subtitle="North American scientific firms submitted more\nH1-B visas for foreign experts than all other sectors",
+       x = "Number of H1-B Visas",
+       y = "Job Sector") + geom_text(aes(label=round(Number.of.Visas,2)), hjust = -.2,size = 3, colour = "black") + scale_x_continuous() + scale_colour_gradient(low="#998ec3",high="#f1a340") 
+# make background white, remove redundant colour legend and tick marks
+p1 <- p1 + theme_classic() + theme(legend.position = "none") 
+# ensure ggplot fits into RMarkdown webpage
+p1 <- p1 + coord_cartesian(xlim = c(0, 300000))
+```
+
+**Data Reference**
+
+-   U.S. Citizenship and Immigration Services 2019, FY 2019 H-1B
+    Employer Data, H-1B Employer Data Hub Files, data file, the United
+    States Government, Department of Homeland Security, United States,
+    viewed 30 July 2021,
+    <https://www.uscis.gov/tools/reports-and-studies/h-1b-employer-data-hub/h-1b-employer-data-hub-files>
+
+#### Reconstruction
+
+The following plot fixes the main issues in the original.
+
+```{r fig.align="center", echo = FALSE}
+p1
+```
