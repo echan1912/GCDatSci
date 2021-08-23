@@ -1,0 +1,187 @@
+---
+title: "Assignment 3 Data Preparation"
+author: "S3875793"
+date: "8/12/2021"
+output: 
+---
+
+```{r}
+# loading libraries
+library(flexdashboard)
+library(dplyr) 
+library(ggplot2)
+library(readr)
+library(forcats)
+library(plotly)
+```
+
+```{r}
+# data preparation
+# read the data 
+tracks <- read_csv("tracks.csv")
+
+# filter to only fall out boy songs
+fobsongs <- tracks %>% filter(artists == "['Fall Out Boy']" )
+
+# remove id_artists column because it is redundant
+fobsongs <- subset(fobsongs, select = -c(id_artists, id) )
+# relabel release date by year only 
+fobsongs$release_date <- fobsongs$release_date %>% factor() %>% factor(levels=c("2003-05-06", "2005-05-03", "2006-01-01", "2007-01-01", "2007-02-06", "2008-01-01", "2013-01-01", "2014-01-01", "2014-11-04", "2015-01-20"),
+    labels=c(2003, 2005, 2006, 2007, 2007, 2008, 2013, 2014, 2014, 2015),
+    ordered = TRUE)
+```
+
+```{r}
+# fall out boy had a hiatus in 2009 and resume activities in 2013
+# add new column pre-hiatus or not
+fobsongs$hiatus <- ifelse(fobsongs$release_date >=2008, "post-hiatus", "pre-hiatus")
+
+hiatus <- fobsongs %>% filter(release_date <= 2008)
+after <- fobsongs %>% filter(release_date >= 2008)
+# reorder hiatus column so that prehiatus appears before posthiatus on box plot
+fobsongs$hiatus <- fobsongs$hiatus %>% as.factor() %>% factor(
+  levels=c('pre-hiatus','post-hiatus'),
+  ordered=TRUE)
+
+write.csv(fobsongs, "fobsongs.csv")
+```
+
+```{r}
+# rename duplicated elements with average
+popmean <- aggregate(fobsongs$popularity, by=list(name=fobsongs$name), FUN=mean)
+colnames(popmean)[2] <- "popularity"
+colnames(popmean)[1] <- "title"
+popmean$album <- c("Infinity On High", "Folie A Deux", "From Under The Cork Tree", "From Under The Cork Tree", "Save Rock And Roll", "Folie A Deux","American Beauty American Psycho","Take This To Your Grave", "From Under The Cork Tree", "Take This To Your Grave", "Take This To Your Grave", "Infinity On High", "From Under The Cork Tree", "Folie A Deux","Folie A Deux", "From Under The Cork Tree","American Beauty American Psycho","American Beauty American Psycho","American Beauty American Psycho","Save Rock And Roll", "From Under The Cork Tree", "From Under The Cork Tree","Take This To Your Grave", "From Under The Cork Tree", "From Under The Cork Tree", "From Under The Cork Tree","Save Rock And Roll", "Infinity On High","Infinity On High","Infinity On High", "American Beauty American Psycho", "Folie A Deux", "Save Rock And Roll")
+
+# order data so that songs appear in descending order of popularity
+popmean$title <- factor(popmean$title, levels = popmean$title[order(popmean$popularity)])
+write.csv(popmean, "popmean.csv")
+```
+
+```{r}
+# data preparation for sorting popularity by single
+
+# have different plots but show up in the same image (look like facets)
+
+TTTYG <- popmean %>% filter(album == "Take This To Your Grave")
+FUTCT <- popmean %>% filter(album == "From Under The Cork Tree")
+IOH <- popmean %>% filter(album == "Infinity On High")
+FAD <- popmean %>% filter(album == "Folie A Deux")
+SRAR <- popmean %>% filter(album == "Save Rock And Roll")
+ABAP <- popmean %>% filter(album == "American Beauty American Psycho")
+
+write.csv(TTTYG, "TTTYG.csv")
+write.csv(FUTCT, "FUTCT.csv")
+write.csv(IOH, "IOH.csv")
+write.csv(FAD, "FAD.csv")
+write.csv(SRAR, "SRAR.csv")
+write.csv(ABAP, "ABAP.csv")
+```
+
+```{r}
+# density plot of song duration
+
+# stacked density plot (choose to overlay or not) + overlay with overall
+hiatusplot <- ggplot(fobsongs, aes(x = duration_ms, fill = hiatus)) + geom_density(alpha = 0.4) + scale_fill_brewer(palette = "Accent") + theme_classic() + labs(
+       x = "Song Duration",
+       y = "Frequency Density") + theme(axis.ticks=element_blank()) 
+hiatusplot <- ggplotly(hiatusplot)
+hiatusplot
+# posthiatus more 250000 songs than prehiatus, prehiatus more 200000 songs than posthiatus
+```
+
+```{r}
+# change format to box plot, facet by hiatus
+durbox <- ggplot(fobsongs, aes(y = duration_ms, x = hiatus, fill = hiatus)) + geom_boxplot() + theme_classic() + labs(title = "Songs post-hiatus have larger spread than songs pre-hiatus", subtitle="Songs post- and pre-hiatus have similar median (average) but the bulk of post-hiatus songs have longer duration than pre-hiatus songs.", y = "Song Duration", x = "Hiatus or Not") + theme(legend.position = "none") + scale_fill_brewer(palette="Accent") + theme(axis.ticks=element_blank())
+durbox <- ggplotly(durbox)
+durbox
+```
+
+```{r}
+# new tab
+# show singles popularity faceted by album
+# use album colours to make it more attractive to fans - TTTYG blue, FUTCT red, IOH blue, FAD red, SRAR red, ABAS blue
+takethis <- ggplot(TTTYG, aes(x = x, y = name)) + geom_point() 
+
+takethis <- takethis + geom_segment(aes(x = 0, y = name, xend =x,yend=name),linetype = 1, color = "#1f78b4") + scale_x_continuous() +
+  labs(title = "Song popularity sorted by album", x = "Popularity", y = "Song Title") + theme_classic() + theme(axis.ticks = element_blank()) +  scale_y_discrete(label = function(y) stringr::str_trunc(y, 20)) 
+# surprising GTA/WIUR has much more popularity than Dead on Arrival since they are both singles, but GTA is higher ranking with a more exciting MV that has a story (source)
+
+takethis <- ggplotly(takethis) 
+takethis[['x']][['layout']][['annotations']][[2]][['x']] <- -0.3
+takethis <- takethis %>% layout(margin = list(l = 75))
+takethis
+```
+
+```{r}
+corktree <- ggplot(FUTCT, aes(x = x, y = name)) + geom_point() + facet_grid(album ~ .) 
+
+corktree <- corktree + geom_segment(aes(x = 0, y = name, xend =x,yend=name),linetype = 1, color = "#fb8072") + scale_x_continuous() +
+  labs(title = "Song popularity sorted by album", x = "Popularity", y = "Song Title") + theme_classic() + theme(axis.ticks = element_blank()) +  scale_y_discrete(label = function(y) stringr::str_trunc(y, 20)) 
+# snitches is a bonus track on vinyl only so expected to have lowest popularity. 7 minutes is about suicide so low popularity
+
+corktree<- ggplotly(corktree)
+corktree[['x']][['layout']][['annotations']][[2]][['x']] <- -0.35
+corktree <- corktree %>% layout(margin = list(l = 75))
+corktree
+```
+
+```{r}
+infinity <- ggplot(IOH, aes(x = x, y = name)) + geom_point() + facet_grid(album ~ .) 
+
+infinity <- infinity + geom_segment(aes(x = 0, y = name, xend =x,yend=name),linetype = 1, color = "#1f78b4") + scale_x_continuous() +
+  labs(title = "Song popularity sorted by album", x = "Popularity", y = "Song Title") + theme_classic() + theme(axis.ticks = element_blank()) +  scale_y_discrete(label = function(y) stringr::str_trunc(y, 20)) 
+# as expected. thanks for the memories is a single still well-loved today. this ain't a scene second highest was single at the time.
+
+infinity<-ggplotly(infinity)
+infinity
+infinity[['x']][['layout']][['annotations']][[2]][['x']] <- -0.27
+infinity <- infinity %>% layout(margin = list(l = 75))
+infinity
+```
+
+```{r}
+folie <- ggplot(FAD, aes(x = x, y = name)) + geom_point() + facet_grid(album ~ .) 
+
+folie <- folie + geom_segment(aes(x = 0, y = name, xend =x,yend=name),linetype = 1, colour = "#fb8072") + scale_x_continuous() +
+  labs(title = "Song popularity sorted by album", x = "Popularity", y = "Song Title")  + theme_classic() + theme(axis.ticks = element_blank())  +  scale_y_discrete(label = function(y) stringr::str_trunc(y, 20)) 
+# folie was not a popular album. members had bad gossip circulating around the time(source). i dont care single has the greatest popularity but all the songs have lower popularity than the rest of their albums.
+folie <- ggplotly(folie)
+folie[['x']][['layout']][['annotations']][[2]][['x']] <- -0.32
+folie <- folie %>% layout(margin = list(l = 75))
+folie
+```
+
+```{r}
+srar <- ggplot(SRAR, aes(x = x, y = name)) + geom_point() + facet_grid(album ~ .) 
+
+srar <- srar + geom_segment(aes(x = 0, y = name, xend =x,yend=name),linetype = 1,colour = "#fb8072") + scale_x_continuous() +
+  labs(title = "Song popularity sorted by album", x = "Popularity", y = "Song Title") + theme_classic() + theme(axis.ticks = element_blank()) +  scale_y_discrete(label = function(y) stringr::str_trunc(y, 20)) 
+# expected my songs to have the highest popularity, but in fact all the songs have similar popularity (possibly because all the songs in the album have MVs) comeback from hiatus has higher scores than Folie, shows band is important to fans
+srar <- ggplotly(srar) 
+srar[['x']][['layout']][['annotations']][[2]][['x']] <- -0.35
+srar <- srar %>% layout(margin = list(l = 75))
+srar
+```
+
+```{r}
+abap <- ggplot(ABAP, aes(x = x, y = name)) + geom_point() + facet_grid(album ~ .) 
+
+abap<- abap + geom_segment(aes(x = 0, y = name, xend =x,yend=name),linetype = 1, color = "#1f78b4") + scale_x_continuous() +
+  labs(title = "Song popularity sorted by album", x = "Popularity", y = "Song Title") + theme_classic() + theme(axis.ticks = element_blank()) +  scale_y_discrete(label = function(y) stringr::str_trunc(y, 20)) 
+# doing the most well as the band went in the mainstream direction. centuries with popularity above 80 as it was overplayed by media (source)
+abap <- ggplotly(abap)
+abap[['x']][['layout']][['annotations']][[2]][['x']] <- -0.3
+abap <- abap %>% layout(margin = list(l = 75))
+abap
+```
+
+There are large differences between the genre of Fall Out Boy pre-hiatus before 2009 and post-hiatus since 2013. 
+
+- TTTYG: surprising GTA has much more popularity than Dead on Arrival since they are both singles, but GTA is higher ranking with a more exciting MV that has a story 
+- Cork Tree: Snitches is a bonus track on vinyl only so expected to have lowest popularity. 7 Minutes is about suicide so low popularity
+as expected. 
+- Infinity: Thnks fr th mmrs is a single still well-loved today, followed by This ain't a scene (single).
+- Folie was not a popular album. members had bad gossip circulating around the time. I Don't Care (single) has the greatest popularity but all the songs have lower popularity than the rest of their albums.
+- SRAR: Expected My Songs to have the highest popularity, but in fact all the songs have similar popularity (possibly because all the songs in the album have MVs). Comeback from hiatus has higher scores than Folie, shows how important the band is to fans
+- ABAP: Fall Out Boy excels in popularity as they went in the mainstream direction. Centuries was overplayed on TV.

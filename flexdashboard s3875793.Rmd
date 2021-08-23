@@ -1,0 +1,78 @@
+---
+title: "How Did The Hiatus Affect Fall Out Boy?"
+output: 
+  flexdashboard::flex_dashboard:
+    orientation: columns
+    vertical_layout: fill
+---
+
+```{r setup, include=FALSE}
+library(flexdashboard)
+library(dplyr) 
+library(ggplot2)
+library(plotly)
+library(readr)
+
+# load datasets
+fobsongs <- read_csv("fobsongs.csv")
+TTTYG <- read_csv("TTTYG.csv")
+FUTCT <- read_csv("FUTCT.csv")
+IOH <- read_csv("IOH.csv")
+FAD <- read_csv("FAD.csv")
+SRAR <- read_csv("SRAR.csv")
+ABAP <- read_csv("ABAP.csv")
+```
+Column {data-width=550}
+-------------------------------------------------------------------------
+### Song popularity by album
+```{r}
+albumpop <- plot_ly()
+
+# add data from first dataframe
+albumpop <- albumpop %>%
+    add_markers(data=TTTYG, name="Take This To Your Grave", x = ~popularity, y = ~title)
+
+# add data from other dataframes
+albumpop <- albumpop %>%
+    add_markers(data=FUTCT, name="From Under The Cork Tree",  x= ~popularity, y = ~title)
+albumpop <- albumpop %>%
+    add_markers(data=IOH, name="Infinity On High",  x= ~popularity, y = ~title)
+albumpop <- albumpop %>%
+    add_markers(data=FAD, name="Folie A Deux",  x= ~popularity, y = ~title)
+albumpop <- albumpop %>%
+    add_markers(data=SRAR, name="Save Rock And Roll", x= ~popularity, y = ~title)
+albumpop <- albumpop %>%
+    add_markers(data=ABAP, name="American Beauty American Psycho", x= ~popularity, y = ~title)
+
+# show figure
+
+a <- list(
+  title = "song title",
+  showticklabels = FALSE
+)
+
+albumpop <- albumpop %>% layout(yaxis = a)
+
+albumpop
+```
+
+Column {data-width=450}
+------------------------------------------------------------------------------
+### Song duration post-hiatus have larger spread than songs pre-hiatus
+```{r}
+durbox <- ggplot(fobsongs, aes(y = duration_ms, x = hiatus, fill = hiatus)) + geom_boxplot() + theme_classic() + labs(y = "Song Duration", x = "Hiatus or Not") + theme(legend.position = "none") + scale_fill_brewer(palette="Accent") + theme(axis.ticks=element_blank())
+durbox <- ggplotly(durbox)
+durbox
+```
+### Song duration in milliseconds pre- and post-hiatus
+```{r}
+# stacked density plot (choose to overlay or not) + overlay with overall
+hiatusplot <- ggplot(fobsongs, aes(x = duration_ms, fill = hiatus)) + geom_density(alpha = 0.4) + scale_fill_brewer(palette = "Accent") + theme_classic() + labs(
+       x = "Song Duration",
+       y = "Frequency Density") + theme(axis.ticks=element_blank()) 
+hiatusplot <- ggplotly(hiatusplot)
+hiatusplot
+# posthiatus more 250000 songs than prehiatus, prehiatus more 200000 songs than posthiatus
+```
+
+
