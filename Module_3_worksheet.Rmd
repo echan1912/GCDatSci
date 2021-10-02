@@ -1,0 +1,173 @@
+---
+title: "Module 3 Worksheet"
+author: "S3875793"
+date: "10/1/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(dplyr)
+library(readr)
+library(tidyr)
+library(knitr)
+```
+
+## Question 1
+
+```{r}
+vect_int <- c(1:5)
+vect_dbl <- c(seq(0.5, 3.5, by = 1))
+vect_char <- c("red", "green", "blue", "yellow", "white")
+vect_fact <- factor(c("very low", "low", "medium", "high", "very high"))
+vect_fact2 <- factor(c("very low", "low", "medium", "high", "very high"), levels = c("very low", "low", "medium", "high", "very high"))
+```
+## Question 2
+```{r}
+vect_fact3 <- factor(c("very low", "low", "medium", "high", "very high"), levels = c("very low", "low", "medium", "high", "very high"), ordered = TRUE)
+vect_fact3
+```
+## Question 3
+```{r}
+vect_comb <- c(vect_int, vect_fact3)
+class(vect_comb)
+```
+## Question 4
+```{r}
+vect_list <- list(vect_int, vect_dbl, vect_char, vect_fact, vect_fact2, vect_fact3, vect_comb)
+str(vect_list)
+states <- c("VIC", "WA", "QLD", "NSW", "SA", "TAS")
+vect_list2 <- append(vect_list, list(states))
+str(vect_list2)
+names(vect_list2) <- c("comp1", "comp2", "comp3", "comp4" , "comp5", "comp6", "comp7", "comp8")
+vect_list2$comp5[3]
+vect_list2[c(2,4,8)]
+```
+## Question 5
+```{r}
+matrix(seq(0, 36, by=2), nrow = 5, ncol = 4)
+
+# warning because the dimensions of the matrix and the size of the data are not equal. R recycles the data when it reaches the end of the data, starting from the beginning of the sequence.
+mat1 <- matrix(seq(0, 36, by=2), nrow = 5, ncol = 4)
+str(mat1)
+attributes(mat1)
+```
+## Question 6
+```{r}
+m1 <- rbind(vect_char, vect_fact3)
+m2 <- cbind(vect_char, vect_fact3)
+
+# use column bind so that number of columns add up to 6
+mat2 <- cbind(mat1, m2)
+str(mat2)
+attributes(mat2)
+
+```
+## Question 7
+```{r}
+m3 <- matrix(vect_dbl, c(1,2,3,4))
+cbind(m2, m3) # Error because the number of rows in m2 and m3 are not equal. Number of rows in both matrices must be the same to carry out column bind.
+```
+## Question 8
+```{r}
+colnames(mat2) <- c("seq1" , "seq2", "seq3", "seq4", "colours", "factor1")
+rownames(mat2) <- c("x1", "x2", "x3", "x4", "x5")
+attributes(mat2)
+```
+## Question 9
+```{r}
+df1 <- data.frame(vect_int, vect_char)
+str(df1)
+```
+## Question 10
+```{r}
+df3 <- cbind(df1, vect_fact3)
+str(df3)
+
+cbind(df3, vect_dbl)
+# Error because the number of rows in df3 and vect_dbl are not equal. Number of rows in both matrices must be the same to carry out column bind.
+```
+## Question 11
+```{r}
+colnames(df3) <- c("numbers", "colours", "scale")
+rownames(df3) <- c("r1", "r2", "r3", "r4", "r5")
+```
+## Question 12
+```{r}
+df3[c(4,5), ]
+df3[ , c(1, 3)]
+df3$scale
+```
+## Question 13
+```{r}
+df3$numbers <- as.numeric(df3$numbers)
+df3$colours <- as.character(df3$colours)
+df3$scale <- as.character(df3$scale)
+str(df3)
+
+```
+
+## Question 14
+```{r}
+mat2 <- as.data.frame(mat2)
+df3 <- as.matrix(df3)
+is.data.frame(mat2)
+is.matrix(df3)
+
+```
+## Question 15
+```{r}
+# i
+germangss <- read_csv("data/germangss.csv")
+typeof(germangss$Political_system)
+typeof(germangss$Age)
+typeof(germangss$Time_of_survey)
+typeof(germangss$Schooling)
+typeof(germangss$Region)
+typeof(germangss$binaryClass)
+typeof(germangss)
+
+names(germangss)[names(germangss) == "Political_system"] <- "Political Attitude"
+names(germangss)[names(germangss) == "Age"] <- "Age Category"
+names(germangss)[names(germangss) == "Time_of_survey"] <- "Year"
+names(germangss)[names(germangss) == "Schooling"] <- "Education Level"
+names(germangss)[names(germangss) == "Region"] <- "Region"
+names(germangss)[names(germangss) == "binaryClass"] <- "Binary Class"
+```
+```{r}
+# ii
+class(germangss$`Political Attitude`)
+class(germangss$`Age Category`)
+class(germangss$Year)
+class(germangss$`Education Level`)
+class(germangss$Region)
+class(germangss$`Binary Class`)
+
+# iii
+str(germangss)
+```
+
+```{r}
+## iv
+germangss$`Political Attitude` <- as.factor(germangss$`Political Attitude`)
+levels(germangss$`Political Attitude`)
+germangss$`Political Attitude`<- factor(germangss$`Political Attitude`, levels=c("Very_poorly", "Poorly", "Well", "Very Well"), ordered = TRUE)
+
+germangss$`Age Category` <- as.factor(germangss$`Age Category`)
+germangss$`Age Category` <- factor(germangss$`Age Category`, ordered = TRUE)
+
+germangss$`Education Level` <- as.factor(germangss$`Education Level`)
+levels(germangss$`Education Level`)
+germangss$`Education Level` <- factor(germangss$`Education Level`, levels = c("Basic_incomplete", "Basic", "Medium", "Upper_medium", "Intensive"))
+```
+```{r}
+# v
+germangss$Year <- as.numeric(germangss$Year)
+
+# vi
+subgss <- data.frame(germangss[c(1:30), c(1,2,4)])
+is.data.frame(subgss)
+```

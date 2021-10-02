@@ -1,0 +1,68 @@
+---
+title: "Module 2 Worksheet"
+author: "S3875793"
+date: "9/29/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Question 1-2
+
+```{r}
+# display working directory
+getwd()
+
+# create folder "Week2" on my desktop and set as working directory
+dir.create("C:/Users/echan/OneDrive/Desktop/Week2")
+setwd("C:/Users/echan/OneDrive/Desktop/Week2")
+```
+
+## Question 3-5
+
+```{r}
+# import csv version of Population dataset with base R
+populationbase <- read.csv("population.csv")
+# import with readr
+library(readr)
+populationreadr <- read_csv("population.csv")
+# import spss version with foreign
+library(foreign)
+populationspss <- read.spss("population.sav", to.data.frame = TRUE)
+```
+## Question 6
+```{r}
+# import with readxl
+library(readxl)
+populationxl <- read_excel("population-migration.xls", sheet = "Inter-regional Migration", col_names = TRUE)
+```
+## Question 7-10
+```{r}
+# import into R using url
+url <- "https://data.cityofnewyork.us/api/views/25th-nujf/rows.csv?accessType=DOWNLOAD"
+babynames <- read_csv("https://data.cityofnewyork.us/api/views/25th-nujf/rows.csv?accessType=DOWNLOAD")
+
+# save as .csv
+write_csv(babynames, "babynames.csv")
+
+# save as RData
+save(babynames, file = "babynames.RData")
+```
+
+## Question 10-11
+```{r}
+# import data table
+library(rvest)
+ausbabies <- read_html("https://en.wikipedia.org/wiki/List_of_cities_in_Australia_by_population")
+length(html_nodes(ausbabies, "table"))
+all_tables <- html_nodes(ausbabies, "table")
+# table 2 is where the data is located as there are multiple tables
+ausbabies <- html_table(all_tables[[2]])
+# save to working directory
+write_csv(ausbabies, "ausbabies.csv")
+# import txt
+auscities <- read_tsv("aus.txt")
+```
+

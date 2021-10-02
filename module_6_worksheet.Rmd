@@ -1,0 +1,101 @@
+---
+title: "Module_6_worksheet"
+author: "S3875793"
+date: "10/1/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r}
+library(readr)
+library(dplyr)
+library(outliers)
+library(MVN)
+```
+
+## Question 1
+
+```{r}
+training <- read_csv("data/training.csv")
+testing <- read_csv("data/testing.csv")
+wilt <- full_join(training, testing)
+```
+
+## Question 2
+```{r}
+# row numbers containing outliers
+greenout <- which(wilt$Mean_Green %in% c(boxplot.stats(wilt$Mean_Green)$out))
+redout <- which(wilt$Mean_Red %in% c(boxplot.stats(wilt$Mean_Red)$out))
+NIRout <- which(wilt$Mean_NIR %in% c(boxplot.stats(wilt$Mean_NIR)$out))
+GLCMout <- which(wilt$GLCM_pan %in% c(boxplot.stats(wilt$GLCM_pan)$out))
+```
+
+## Question 3
+```{r}
+# location of outliers using Z-score > 3
+greenout2 <- wilt$Mean_Green %>% scores(type = "z")
+which(abs(greenout2) > 3)
+# number of outliers for Mean Green
+
+redout2 <- wilt$Mean_Red %>% scores(type="z")
+which(abs(redout2) > 3)
+# number of outliers for Mean Red
+n_distinct(which(abs(redout2) > 3))
+
+NIRout2 <- wilt$Mean_NIR %>% scores(type="z")
+which(abs(NIRout2) > 3)
+# number of outliers for Mean NIR
+n_distinct(which(abs(NIRout2) > 3))
+
+GLCMout2 <- wilt$GLCM_pan %>% scores(type="z")
+which(abs(GLCMout2) > 3)
+# number of outliers for GLCM pan
+n_distinct(which(abs(GLCMout2) > 3))
+
+sapply(wilt[, c(2:5)], summary)
+```
+## Question 5
+```{r}
+ozone <- read_csv("data/ozone.csv")
+
+# univariate outlier detection
+boxplot(ozone$ozone_reading, main = "Box Plot of Ozone Reading", ylab = "Ozone Reading")
+boxplot(ozone$Month, main = "Box Plot of Ozone Month", ylab = "Month")
+boxplot(ozone$Wind_speed, main = "Box Plot of Wind Speed", ylab = "Wind Speed")
+
+# bivariate outlier detection
+# bivariate box plots
+boxplot(ozone$ozone_reading ~ ozone$Month, main = "Ozone reading by month", ylab = "Ozone Reading", xlab = "Month")
+boxplot(ozone$ozone_reading ~ ozone$Wind_speed, main = "Ozone reading by wind speed", ylab = "Ozone Reading", xlab = "Wind Speed")
+
+# bivariate scatter plots
+ozone %>% plot(ozone_reading ~ Month, data = ., ylab = "Ozone Reading", xlab = "Month", main = "Ozone Reading by Month")
+
+ozone %>% plot(ozone_reading ~ Wind_speed, data = ., ylab = "Ozone Reading", xlab = "Wind Speed", main = "Ozone Reading by Wind Speed")
+
+# subset data frame
+subset <- ozone %>% select(ozone_reading, Month, Wind_speed) 
+subset <- subset[complete.cases(subset), ]
+```
+## Question 6
+```{r}
+# checking for outliers
+results <- mvn(subset, multivariateOutlierMethod = "quan", showOutliers = TRUE)
+
+# removing outliers manually
+results$multivariateOutliers
+# exclude observations 1 to 61
+subset_clean <- subset[ -c(1:61), ]
+# see if outliers are excluded
+dim(subset_clean)
+
+# removing outliers with MVN
+removal <- mvn(subset, multivariateOutlierMethod = "quan", showOutliers = TRUE, showNewData = TRUE)
+```
+
+
+

@@ -1,0 +1,74 @@
+---
+title: "module_4.1_worksheet"
+author: "S3875793"
+date: "10/1/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(tidyr)
+library(dplyr)
+library(readr)
+library(readxl)
+library(knitr)
+```
+
+## Question 1
+```{r pressure, echo=FALSE}
+family_incidents <- read_csv("data/family_incidents.csv")
+class(family_incidents$`Police region`)
+class(family_incidents$`Local government area`)
+class(family_incidents$`2012-13`)
+class(family_incidents$`2013-14`)
+class(family_incidents$`2014-15`)
+class(family_incidents$`2015-16`)
+class(family_incidents$`2016-17`)
+
+family_incidents$`Police region` <- as.factor(family_incidents$`Police region`)
+```
+
+## Question 3
+```{r}
+# need to transform the columns from 2012-13 to 2016-17, making a new column for their names, Year, and a new column for their values Rate
+
+family_incidents <- family_incidents %>% pivot_longer("2012-13":"2016-17", names_to = "Year", values_to = "Rate", values_drop_na = TRUE)
+```
+
+## Question 4 
+```{r}
+family_incidents2 <- family_incidents %>% separate("Year", into = c("century", "year"), sep = "-") %>% unite("Year", "century", "year", sep = "/")
+```
+
+## Question 5
+```{r}
+library(readxl)
+PHN <- read_excel("data/PHN2017.xlsx", skip = 5) # starts at row 6 because there are descriptions in the first 5 rows, not the dataset
+
+colnames(PHN)
+sapply(PHN, class)
+
+PHN$`Age Group` <- as.factor(PHN$`Age Group`)
+PHN$`Age Group` <- factor(PHN$`Age Group`, ordered = TRUE)
+levels(PHN$`Age Group`)
+```
+
+## Question 6
+```{r}
+# transform the columns from %Polio to %HEP into a new column for their names, Vaccination Type, and a new column for their values, Months
+PHN2 <- PHN %>% pivot_longer("%Polio":"%HEP", names_to = "Vaccination Type", values_to = "Months", values_drop_na = TRUE)
+
+# transform the columns from Age Group into three new columns, and the values that form the multiple columns, %Polio and %HEP
+PHN3 <- PHN2 %>% pivot_wider(names_from = "Age Group", values_from = "Months")
+
+# mean percentage of children immunised
+immunised <- as.vector(rowMeans(PHN3[,4:6]))
+
+# vector in one line
+immunised2 <- PHN %>% pivot_longer("%Polio":"%HEP", names_to = "Vaccination Type", values_to = "Months", values_drop_na = TRUE) %>% pivot_wider(names_from = "Age Group", values_from = "Months") %>% select("12-<15 Months":"60-<63 Months") %>% rowMeans() %>% as.vector()
+
+```
+

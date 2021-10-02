@@ -1,0 +1,132 @@
+---
+title: "Module 4.2 Worksheet"
+author: "S3875793"
+date: "10/1/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r cars}
+library(tidyr)
+library(dplyr)
+library(readr)
+library(readxl)
+library(knitr)
+```
+
+## Question 1
+
+```{r}
+family_incidents <- read_csv("data/family_incidents.csv")
+
+# subset 2015-2016 and 2016-2017 columns
+family_incidents[,6:7]
+
+# group by police region and show mean and sd of 2015-2016 and 2016-2017
+family_incidents %>% group_by(`Police region`) %>% summarise(mean_2016 = mean(`2015-16`, na.rm = TRUE), sd_2016 = sd(`2015-16`, na.rm = TRUE), mean_2017 = mean(`2016-17`, na.rm = TRUE), sd_2017 = sd(`2016-17`, na.rm = TRUE))
+```
+
+## Question 2
+```{r}
+Influenza <- read_excel("data/Influenza.xlsx", sheet = "Flu Public Dataset", skip = 1)
+Influenza$`Age  group` <- factor(Influenza$`Age  group`, levels = c("00-04", "05-09",  "15-19" ,  "20-24","25-29",  "30-34", "40-44", "45-49",  "50-54",  "55-59", "60-64",  "65-69" ,  "70-74" , "75-79",  "80-84" ,  "85+" , "Unknown"), labels = c("00-04", "05-09",  "15-19" ,  "20-24","25-29",  "30-34", "40-44", "45-49",  "50-54",  "55-59", "60-64",  "65-69" ,  "70-74" , "75-79",  "80-84" ,  "85+" , "Unknown"), ordered = TRUE)
+Influenza$Sex <- factor(Influenza$Sex, levels = c("Male", "Female", "X", "Unknown"), labels = c("Male", "Female", "X", "Unknown"), ordered = TRUE)
+Influenza %>% filter(`Indigenous status` == "Indigenous") %>% group_by(`Age  group`, `Sex`, `State`) %>% arrange()
+```
+## Question 3
+```{r}
+# subset for week ending, state, indigenous
+Influenza2 <- Influenza %>% select(-`Age  group`, -`Sex`) %>% filter(`Indigenous status` == "Indigenous") %>% select(-`Indigenous status`) 
+
+# rename Week Ending (Friday) column into year
+names(Influenza2)[names(Influenza2) == "Week Ending (Friday)"] <- "year"
+
+# change date variables into year
+Influenza2$year <- substr(Influenza2$year, start = 1, stop = 4)
+
+# change type/subtype into numeric counts
+Influenza2$`Type/Subtype` <- 1
+
+# sum the counts by State and Year
+Influenza3 <- Influenza2 %>% group_by(State) 
+Influenza3 <- aggregate(`Type/Subtype`~`year` + `State`, data=Influenza3,FUN=sum)
+
+# pivot States to become column names
+df1 <- Influenza3 %>% pivot_wider(names_from = `State`, values_from = `Type/Subtype`)
+```
+
+## Question 4
+```{r}
+# subset for week ending, state, indigenous
+Influenza2 <- Influenza %>% select(-`Age  group`, -`Sex`) %>% select(-`Indigenous status`) 
+
+# rename Week Ending (Friday) column into year
+names(Influenza2)[names(Influenza2) == "Week Ending (Friday)"] <- "year"
+
+# change date variables into year
+Influenza2$year <- substr(Influenza2$year, start = 1, stop = 4)
+
+# change type/subtype into numeric counts
+Influenza2$`Type/Subtype` <- 1
+
+# sum the counts by State and Year
+Influenza3 <- Influenza2 %>% group_by(State) 
+Influenza3 <- aggregate(`Type/Subtype`~`year` + `State`, data=Influenza3,FUN=sum)
+
+# pivot States to become column names
+df2 <- Influenza3 %>% pivot_wider(names_from = `State`, values_from = `Type/Subtype`)
+
+# join df1 and df2 but differentiate df1 from df2
+full_join(df1, df2, suffix = c(".df1", ".df2"))
+```
+## Question 5
+```{r}
+vic_pet <- read_csv("data/VIC_pet.csv")
+sa_pet <- read_csv("data/SA_pet.csv")
+```
+```{r}
+sa_pet$id <- as.character(sa_pet$id)
+bind_rows(sa_pet, vic_pet)
+union(sa_pet, vic_pet)
+intersect(sa_pet, vic_pet)
+setdiff(sa_pet, vic_pet)
+
+# The two datasets are different as there are no intersections between them
+```
+
+## Question 6
+```{r}
+pet1 <- read_csv("data/pet1.csv")
+pet2 <- read_csv("data/pet2.csv")
+pet3 <- read_csv("data/pet3.csv")
+
+new_pet <- left_join(pet1, pet2)
+new_pet <- left_join(new_pet, pet3)
+
+pet_join <- right_join(pet1, pet2)
+pet_join <- right_join(pet_join, pet3)
+
+# The results are the same because left join keeps all the observations in pet1, but only the matching observations in pet 2, and then only the matching observations in pet3. Right join keeps all the observations in pet2, but only the matching observations in pet 1, and then keeps all the observations in pet3.
+
+setdiff(new_pet, pet_join)
+anti_join(new_pet, pet_join)
+
+```
+
+# Question 7
+```{r}
+# keep rows in both datasets - inner join
+inner_join(pet2, pet3)
+```
+
+# Question 8
+```{r}
+# only keep rows in pet2 - left join or right join
+left_join(pet2, pet3)
+# or 
+right_join(pet3, pet2)
+```

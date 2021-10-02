@@ -1,0 +1,240 @@
+---
+title: "Module 7 Worksheet"
+author: "S3875793"
+date: "10/1/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r packages}
+library(readr)
+library(dplyr)
+library(forecast)
+library(infotheo)
+```
+
+```{r}
+# predefined function
+minmaxnormalise <- function(x){(x- min(x)) /(max(x)-min(x))}
+```
+
+
+```{r}
+# load the data
+candy <- read_csv("data/candy_production.csv")
+
+# rename IPG3113N variable to production
+names(candy)[2] <- 'production'
+```
+
+## Question 1
+```{r}
+# checking distribution shape
+hist(candy$production)
+# shape is left-skewed
+```
+```{r}
+# log base 10 transformation
+log_production <- log10(candy$production)
+hist(log_production)
+# shape became even more left-skewed
+```
+```{r}
+# natural log transformation
+ln_production <- log(candy$production)
+hist(ln_production)
+# shape became more left-skewed but effect less drastic than using log10
+```
+```{r}
+# square root transformation
+sqrt_production <- sqrt(candy$production)
+hist(sqrt_production)
+# became more left-skewed but less than with log transformations
+```
+```{r}
+# reciprocal transformation
+reci_production <- 1/(candy$production)
+hist(reci_production)
+# drastic effect and became right-skewed
+```
+```{r}
+# BoxCox transformation
+BoxCox_production <- BoxCox(candy$production, lambda = "auto")
+hist(BoxCox_production)
+# distribution became uniform and symmetrical
+```
+## Question 2
+```{r}
+# mean centring
+center_production <- scale(candy$production, center = TRUE, scale = FALSE)
+hist(center_production)
+# shape is still symmetrical but across a smaller numerical range
+```
+```{r}
+# scale by SD without mean centring
+scale_production2 <- scale(as.matrix(candy$production), center = FALSE, scale = apply(as.matrix(candy$production), 2, sd, na.rm = TRUE))
+hist(scale_production2)
+# symmetric
+```
+## Question 3
+```{r}
+# z-score standardisation
+z_production <- scale(candy$production, center = TRUE, scale = TRUE)
+hist(z_production)
+# normal distribution with mean 0 SD 1
+```
+```{r}
+# min max normalisation
+minmaxprod <- lapply(as.data.frame(candy$production), minmaxnormalise)
+minmaxprod <- unlist(minmaxprod)
+hist(minmaxprod)
+# more uniform and symmetric because of outliers suppressed
+```
+## Question 4
+
+```{r}
+# equal width binning
+ew_binned <- discretize(candy$production, disc = "equalwidth")
+candy$production %>% bind_cols(ew_binned) %>% head(15)
+```
+
+```{r}
+# equal depth binning
+ed_binned <- discretize(candy$production, disc = "equalfreq")
+candy$production %>% bind_cols(ed_binned) %>% head(15)
+```
+```{r}
+ozone <- read_csv("data/ozone.csv")
+```
+## Question 5
+```{r}
+# subset variables 
+ozone_sub <- select(ozone, ozone_reading, pressure_height, Pressure_gradient, Visibility, Inversion_temperature)
+```
+```{r}
+# histograms
+sapply(ozone_sub, FUN = hist)
+```
+
+```{r}
+# log base 10 transformation
+ozone_log <- sapply(ozone_sub, log10)
+
+# impute NaN values as NA values
+ozone_log[!is.finite(ozone_log)] <- NA
+
+# remove NA values 
+ozone_log <- ozone_log[complete.cases(ozone_log), ]
+
+# convert to data frame
+ozone_log <- as.data.frame(ozone_log)
+
+# log base 10 histograms
+sapply(ozone_log, FUN = hist)
+```
+```{r}
+# natural log transformation
+ozone_ln <- sapply(ozone_sub, log)
+
+# impute NaN values as NA values
+ozone_ln[!is.finite(ozone_ln)] <- NA
+
+# remove NA values 
+ozone_ln <- ozone_ln[complete.cases(ozone_ln), ]
+
+# convert to data frame
+ozone_ln <- as.data.frame(ozone_ln)
+
+# log base 10 histograms
+sapply(ozone_ln, FUN = hist)
+```
+```{r}
+# square root transformation
+ozone_sqrt <- sapply(ozone_sub, sqrt)
+
+# impute NaN values as NA values
+ozone_sqrt[!is.finite(ozone_sqrt)] <- NA
+
+# remove NA values 
+ozone_sqrt <- ozone_sqrt[complete.cases(ozone_sqrt), ]
+
+# convert to data frame
+ozone_sqrt <- as.data.frame(ozone_sqrt)
+
+# log base 10 histograms
+sapply(ozone_sqrt, FUN = hist)
+```
+## Question 6
+```{r}
+centring <- function(x) {scale(x, center = TRUE, scale = FALSE)}
+centered_ozone <- apply(ozone_sub, MARGIN = 2, FUN = centring)
+
+# impute NaN values as NA values
+centered_ozone[!is.finite(centered_ozone)] <- NA
+
+# remove NA values 
+centered_ozone <- centered_ozone[complete.cases(centered_ozone), ]
+
+# convert to matrix
+centered_ozone <- as.matrix(centered_ozone)
+
+# histogram
+apply(centered_ozone, MARGIN = 2, hist)
+```
+## Question 7
+```{r}
+minmax_ozone <- lapply(ozone_sub, minmaxnormalise)
+minmax_ozone <- as.data.frame(minmax_ozone)
+ozone_sub <- as.data.frame(ozone_sub)
+# checking columns with NAs
+colSums(is.na(ozone_sub_noNA)) # only 34
+# many NA values because there are missing values in the ozone_sub data frame. I need to omit these before doing min max calculations. Since there are only a few of them in comparison to the dataset dimensions I can exclude them.
+
+# apply min max normalisation again
+ozone_sub_noNA <- ozone_sub[complete.cases(ozone_sub), ]
+minmax_ozone_noNA <- as.data.frame(lapply(ozone_sub_noNA, minmaxnormalise))
+
+# plot histogram
+sapply(minmax_ozone_noNA, FUN = hist)
+```
+
+## Question 8
+```{r}
+# equal width binning
+ew_binned_reading <- discretize(ozone$ozone_reading, disc = "equalwidth")
+ozone$ozone_reading %>% bind_cols(ew_binned_reading) %>% head(15)
+
+# equal depth binning
+ed_binned_reading <- discretize(ozone$ozone_reading, disc = "equalfreq")
+ozone$ozone_reading %>% bind_cols(ed_binned_reading) %>% head(15)
+```
+
+## Question 9
+```{r}
+bctransform <- function(x){BoxCox(x, lambda = "auto")}
+BoxCox_ozone_sub <- apply(ozone_sub, MARGIN = 2, FUN = bctransform)
+
+# remove NAs
+BoxCox_ozone_sub <- BoxCox_ozone_sub[complete.cases(BoxCox_ozone_sub), ]
+BoxCox_ozone_sub <- as.data.frame(BoxCox_ozone_sub)
+
+# histograms for loop
+for (cols in colnames(BoxCox_ozone_sub)) {
+  BoxCox_ozone_sub %>% pull(cols) %>% hist(main = cols)
+}
+```
+
+## Question 10
+```{r}
+ozone_subset_2 <- select(ozone, ozone_reading, pressure_height, Inversion_temperature)
+
+# remove NAs
+ozone_subset_2 <- as.data.frame(ozone_subset_2[complete.cases(ozone_subset_2), ])
+
+scale(ozone_subset_2, center = TRUE, scale = TRUE)
+```
+
+
