@@ -1,0 +1,165 @@
+---
+title: "Module 5 Worksheet"
+author: "S3875793"
+date: "9/29/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r packages, include=FALSE}
+library(readr)
+library(dplyr)
+library(readxl)
+library(gdata)
+library(rvest)
+library(tidyr)
+library(knitr)
+library(deductive)
+library(validate)
+library(Hmisc)
+library(stringr)
+```
+
+```{r}
+pr <- readRDS("data/pr.RDS")
+```
+
+
+## Question 1
+```{r}
+# identify NAs in data frame
+is.na(pr)
+```
+```{r}
+# identify NAs in each column
+for (cols in colnames(pr)) {
+  print(pr %>% pull(cols) %>% is.na())
+}
+```
+```{r}
+# find location of NAs in each column
+for (cols in colnames(pr)) {
+  print(pr %>% pull(cols) %>% is.na() %>% which())
+}
+```
+```{r}
+# counts of NAs in each column
+for (cols in colnames(pr)) {
+  print(pr %>% pull(cols) %>% is.na() %>% sum())
+}
+```
+```{r}
+# total missing vallues in each column
+colSums(is.na(pr))
+```
+## Question 2
+```{r}
+complete_pr <- as.data.frame(pr[complete.cases(pr), ])
+na_pr <- as.data.frame(pr[!complete.cases(pr), ])
+pr_na_omit <- na.omit(pr)
+
+# find country that has NA in every column
+which(rowSums(is.na(pr)) == (ncol(pr) - 1))
+# row 37 - China has NA values in all columns
+pr[37, ]
+
+filtered_pr <- pr[-c(which(rowSums(is.na(pr)) == (ncol(pr) - 1))),]
+```
+
+## Question 3
+```{r}
+# calculate means for quarterly columns of 2017
+Qmean <- rowMeans(subset(pr, select = c(`2017_Q1`, `2017_Q2`, `2017_Q3`,`2017_Q4`)), na.rm = TRUE)
+Qmean <- as.data.frame(Qmean)
+
+# add Country column from pr to Qmean
+Qmean <- cbind(pr$Country, Qmean)
+
+# change column names of Qmean
+colnames(Qmean) <- c("country", "mean")
+
+# recode NA values in the quarterly columns
+pr$`2017_Q1`[is.na(pr$`2017_Q1`)] <- ifelse(is.na(pr$`2017_Q1`), Qmean$mean[Qmean$country %in% pr$Country], pr$`2017_Q1`)
+pr$`2017_Q2`[is.na(pr$`2017_Q2`)]<- ifelse(is.na(pr$`2017_Q2`), Qmean$mean[Qmean$country %in% pr$Country], pr$`2017_Q2`)
+pr$`2017_Q3`[is.na(pr$`2017_Q3`)]<- ifelse(is.na(pr$`2017_Q3`), Qmean$mean[Qmean$country %in% pr$Country], pr$`2017_Q3`)
+pr$`2017_Q4`[is.na(pr$`2017_Q4`)] <- ifelse(is.na(pr$`2017_Q4`), Qmean$mean[Qmean$country %in% pr$Country], pr$`2017_Q4`)
+```
+
+## Question 4
+```{r}
+popbycountry <- read_csv("data/popbycountry.csv")
+
+# replace -- as NA
+popbycountry[popbycountry == "--"] <- NA
+
+# identifying NA values
+is.na(popbycountry)
+which(is.na(popbycountry))
+sum(is.na(popbycountry))
+colSums(is.na(popbycountry))
+
+# remove countries that have NA in every column
+filtered_popbycountry <- popbycountry[-c(which(rowSums(is.na(popbycountry)) == (ncol(popbycountry) - 1))),]
+
+# checking data structures
+sapply(filtered_popbycountry, str)
+# all columns except for the first should be numeric
+filtered_popbycountry[,-1] <- sapply(filtered_popbycountry[,-1], as.numeric)
+# checking data types
+sapply(filtered_popbycountry, typeof)
+```
+## Question 5
+```{r, warning=FALSE}
+Germany <- filtered_popbycountry %>% filter(str_detect(`...1`, 'Germany'))
+DeutschSums <- colSums(Germany[2:3, 2:12], na.rm = TRUE)
+DeutschSums <- t(DeutschSums)
+DeutschSums <- as.data.frame(DeutschSums)
+
+# recode NA values in columns 1980 to 1990 for Germany row
+
+# add ...1 column from Germany to DeutschSums
+DeutschSums <- cbind(Germany$...1, DeutschSums)
+
+# change column names of DeutschSums
+colnames(DeutschSums) <- c("...1", "1980", "1981", "1982", "1983", "1984", "1985", "1986","1987", "1988", "1989", "1990")
+
+Germany$`1980`[is.na(Germany$`1980`)] <- ifelse(is.na(Germany$`1980`), DeutschSums$`1980`[DeutschSums$...1 %in% Germany$...1], Germany$`1980`)
+
+Germany$`1981`[is.na(Germany$`1981`)] <- ifelse(is.na(Germany$`1981`), DeutschSums$`1981`[DeutschSums$...1 %in% Germany$...1], Germany$`1981`)
+
+Germany$`1982`[is.na(Germany$`1982`)] <- ifelse(is.na(Germany$`1982`), DeutschSums$`1982`[DeutschSums$...1 %in% Germany$...1], Germany$`1982`)
+
+Germany$`1983`[is.na(Germany$`1983`)] <- ifelse(is.na(Germany$`1983`), DeutschSums$`1983`[DeutschSums$...1 %in% Germany$...1], Germany$`1983`)
+
+Germany$`1984`[is.na(Germany$`1984`)] <- ifelse(is.na(Germany$`1984`), DeutschSums$`1984`[DeutschSums$...1 %in% Germany$...1], Germany$`1984`)
+
+Germany$`1985`[is.na(Germany$`1985`)] <- ifelse(is.na(Germany$`1985`), DeutschSums$`1985`[DeutschSums$...1 %in% Germany$...1], Germany$`1985`)
+
+Germany$`1986`[is.na(Germany$`1986`)] <- ifelse(is.na(Germany$`1986`), DeutschSums$`1986`[DeutschSums$...1 %in% Germany$...1], Germany$`1986`)
+
+Germany$`1987`[is.na(Germany$`1987`)] <- ifelse(is.na(Germany$`1987`), DeutschSums$`1987`[DeutschSums$...1 %in% Germany$...1], Germany$`1987`)
+
+Germany$`1988`[is.na(Germany$`1988`)] <- ifelse(is.na(Germany$`1988`), DeutschSums$`1988`[DeutschSums$...1 %in% Germany$...1], Germany$`1988`)
+
+Germany$`1989`[is.na(Germany$`1989`)] <- ifelse(is.na(Germany$`1989`), DeutschSums$`1989`[DeutschSums$...1 %in% Germany$...1], Germany$`1989`)
+
+Germany$`1990`[is.na(Germany$`1990`)] <- ifelse(is.na(Germany$`1990`), DeutschSums$`1990`[DeutschSums$...1 %in% Germany$...1], Germany$`1990`)
+```
+## Question 6
+same as Question 5 but without subsetting Germany
+```{r}
+target <- c("Germany, East", "Germany, West")
+DeutschSums2 <- filtered_popbycountry %>% filter(`...1` %in% target) %>% select(`1980`:`1990`) %>% colSums(., na.rm = TRUE)
+DeutschSums2 <- as.list(DeutschSums2)
+names(DeutschSums2) <- c(1980, 1981, 1982, 1983, 1984, 1985, 1986, 1987, 1988, 1989, 1990)
+
+# recode NA values in columns 1980 to 1990 for Germany row
+filtered_popbycountry[69, ] <- filtered_popbycountry %>% filter(`...1` == "Germany") %>% replace_na(DeutschSums2)
+
+# remove Germany, East, Germany, West
+filtered_popbycountry <- filter(filtered_popbycountry, filtered_popbycountry$...1 != "Germany, East" & filtered_popbycountry$...1 != "Germany, West")
+```
