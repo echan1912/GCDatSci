@@ -1,0 +1,78 @@
+---
+title: "Module 8.1 Worksheet"
+author: "S3875793"
+date: "10/4/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(readr)
+library(dplyr)
+library(lubridate)
+```
+
+## Question 1
+```{r}
+avocado <- read_csv("data/avocado.csv")
+str(avocado$Date)
+avocado$Date <- as.Date(avocado$Date)
+```
+
+## Question 2
+```{r}
+avocado$Date <- format(as.character(avocado$Date, "%d/%m/%Y"))
+
+# read in as date type variable
+avocado$Date <- as.Date(avocado$Date, "%d/%m/%Y")
+```
+
+## Question 3
+```{r}
+avocado$Date <- format(as.character(avocado$Date, "%d.%m.%Y"))
+# read in as date type variable
+avocado$Date <- as.Date(avocado$Date, "%d.%m.%Y")
+```
+
+## Question 5
+```{r}
+pollution <- read_csv("data/Pollution.csv")
+str(pollution$Date)
+pollution$Date <- as.POSIXlt(pollution$Date,format="%m/%d/%Y %H:%M")
+
+# replace first 0 in date column as 2
+pollution$Date <- gsub(pattern = "00", replacement = "20", pollution$Date)
+
+# set timezone for the same date time
+pollution$Date <- with_tz(pollution$Date, tzone = "UTC")
+```
+## Question 6
+```{r}
+# create new year, month, day, hour and minute columns using mutate and lubridate
+pollution <- pollution %>% mutate(year = year(pollution$Date) , month = month(pollution$Date), day = day(pollution$Date), hour = hour(pollution$Date),minute = minute(pollution$Date))
+
+# combine year , month and day into a new column
+pollution <- pollution %>% mutate(YearMonthDay = paste(year, month, day, sep = "-"))
+```
+## Question 7
+```{r}
+pollution <- pollution %>% mutate(newtime = Sys.time())
+# add 2 years to newtime variable
+pollution$newtime + dyears(2)
+# check difference between Date and newtime
+round(pollution$newtime - pollution$Date, 2)
+
+# check duration of the year variable
+dyears(1)
+```
+## Question 8
+```{r}
+q8 <- seq(ymd_hm("2015-05-01 6:00"), ymd_hm("2015-10-01 7:00"), by = "hour")
+length(q8)
+
+# subset pollution data with same length
+pollution_subset <- pollution[1:length(q8),]
+
+# column bind
+cbind(pollution_subset, q8)
+```
