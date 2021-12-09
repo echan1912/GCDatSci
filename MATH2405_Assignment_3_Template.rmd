@@ -1,0 +1,384 @@
+---
+title: 'Data Wrangling Assessment Task 3: Dataset challenge'
+author: "Elizabeth Chan s3875793"
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
+---
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(out.width = "75%")
+```
+Voice over presentation link: https://rmit-arc.instructuremedia.com/embed/4a18c3a2-aaff-4f07-a374-978324b4206c
+
+## Required packages 
+```{r, results='hide', message=FALSE}
+library(readr) # read and import data 
+library(readxl) # import data from Excel
+library(dplyr) # data wrangling and pipes
+library(tidyr) # tidy data principles
+library(lubridate) # dates and times
+library(stringr) # string manipulation
+library(Hmisc) # imputing mean, median and mode
+library(editrules) # checking obvious errors and inconsistencies
+library(MVN) # multivariate outlier detection
+library(forecast) # BoxCox transformation
+```
+## Data 
+
+### Influenza - laboratory confirmed data sets
+These data sets (Department of Health, 2021) can be joined with Australian population data sets by the common variables Date and State. This can detect if groups of certain Region, Sex, Indigenous Status and Age Group have greater susceptibility towards the flu, and which flu virus sub type is more infectious. This allows Australia to allocate appropriate funds to hospitals and charities supporting susceptible groups. 
+
+The "2019-2014" sheet contains 871,237 influenza observations from 2014 to 2019.
+The "2013-2008" sheet contains 178,632 influenza observations between 2008 to 
+2013. Cases are grouped by date, age group, sex, state, indigenous status and influenza type. They can be merged into one larger data set (Department of Health, 2021).
+
+The variables for Influenza - laboratory confirmed data are:
+
+- Week Ending (Friday) (date): date of the diagnosis, can be treated as a continuous quantitative variable for time series analysis
+- State (character): multinominal variable showing case region
+- Age Group (numeric): continuous quantitative variable showing case age 
+- Sex (character): multinominal variable showing case sex
+- Indigenous Status (character): categorical variable showing whether the case is indigeneous
+- Type/Subtype (character): binary nominal variable about whether the case has Influenza A or B
+
+### Population - states and territories data set
+The data set (Australian Bureau of Statistics, 2021) can be joined with the Influenza data sets by date, and state. This tracks population changes and investigate causes. This allows Australia to decide on how to manage population change depending on the cause, such as migration and COVID. The "Data1" sheet contains 160 population counts from June 1981 onward. Population is grouped by date, state, territory and sex. They had been recorded 4 times in the same months annually, March, June, September and December. 
+
+The variables for Population - states and territories data are:
+
+- Region (character): multinominal variable showing region of the population
+- Sex (character): binary nominal variable showing sex of the population 
+- Date (date): date the population was counted, can be treated as a continuous quantitative variable for time series analysis.
+- Estimated Resident Population (numeric): discrete quantitative variable 
+showing population of certain sex and state.
+
+Since Influenza3.xlsx and auspop3.xls files contain multiple sheets, I use the sheet parameter to select data set locations. I skipped the first row for Influenza3.xlsx because it is the title. The data sets have been imported as tibbles, so I converted them into data frames.
+```{r}
+influenza1 <- read_excel("data/influenza3.xlsx", sheet = "2019-2014", skip = 1)
+influenza2 <- read_excel("data/influenza3.xlsx", sheet = "2013-2008", skip = 1)
+auspop <- read_excel("data/auspop3.xls", sheet = "Data1")
+head(influenza1)
+head(influenza2)
+head(auspop)
+influenza1 <- as.data.frame(influenza1)
+influenza2 <- as.data.frame(influenza2)
+```
+
+### Merge influenza1 and influenza2 into a larger data frame
+I bind their rows because they share the same number of columns. The auspop data frame is messy, so it needs tidying before merging with the influenza data frame.
+```{r}
+influenza <- rbind(influenza1, influenza2)
+```
+
+## Understand 
+
+### Influenza - laboratory confirmed data set
+I converted Age group to factor because the cases can be ranked in ascending age order. 
+```{r}
+# types of variables and data structures
+summary(str(influenza))
+summary(attributes(influenza))
+# data type conversions
+influenza$`Age  group` <- factor(influenza$`Age  group`, levels = c("00-04", "05-09", "15-19", "20-24", "25-29", "30-34", "40-44", "45-49", "50-54", "55-59", "60-64", "65-69" , "70-74", "75-79",  "80-84" , "85+" , "Unknown"), labels = c("00-04", "05-09", "15-19", "20-24","25-29", "30-34", "40-44", "45-49",  "50-54",  "55-59", "60-64",  "65-69" , "70-74", "75-79", "80-84", "85+", "Unknown"), ordered = TRUE)
+# check levels of factor variables
+levels(influenza$`Age  group`)
+```
+
+### Population - states and territories data set 
+I removed the first 9 rows because the values are the same for each column. The first column is renamed to have a header representing its values. The imported Excel file shows the Date as the number of days since January 1, 1900 (Microsoft Office Support, n.d.). This is not readable so needs to be converted into Month and Year like the file shows when in Excel format. The variable is converted from string to numeric for this, then as date. 
+
+I checked only the data type for date because auspop needs to be tidied before checking data types and structures (Steps 2 and 4). 
+```{r}
+auspop <- auspop %>% slice(10:n())
+auspop <- rename(auspop, date = "...1")
+auspop$date <- as.numeric(auspop$date)
+auspop$date <- as.Date(auspop$date, origin = "1899-12-30")
+```
+
+##	Tidy & Manipulate Data I 
+The three "Tidy Data" principles (Wickham, H 2014) are:
+1.    Each column is a variable.
+2.    Each row is an observation.
+3.    Each cell is a single value.
+
+### Influenza - laboratory confirmed data set
+According to tidy data principles, Influenza is tidy. However, I would like to merge the data between Influenza and Population data sets so there is the problem:
+
+#### Multiple variables are stored in one column 
+The Week Ending (Friday) variable shows three variables - year, month and day that can be extracted into 3 numeric columns.
+```{r}
+influenza <- influenza %>% tidyr::separate(`Week Ending (Friday)`, 
+                                           into = c("year", "month", "day"), sep = "-")
+influenza$year <- as.numeric(influenza$year)
+influenza$month <- as.numeric(influenza$month)
+```
+I add a new number of cases column that shows the count. I sum them up for each year and month combination.
+```{r, warning=FALSE}
+influenza$number_of_cases <- 1
+influenza <- influenza %>% group_by(year, month, Sex, State) %>% summarise(number_of_cases = sum(number_of_cases))
+```
+There are categories "Unknown" and "X" for Sex, "not available" and "Unknown" for Indigenous status that represent missing values. These need to be replaced with modes before merging with auspop.
+```{r}
+# change values to NAs
+influenza[influenza == "Unknown"] <- NA
+influenza[influenza == "X"] <- NA
+influenza[influenza == "not available"] <- NA
+# mode imputation for categorical variable
+influenza$Sex <- impute(influenza$Sex, fun = mode)
+influenza$`Indigenous status`<- impute(influenza$`Indigenous status`, fun = mode)
+```
+
+### Population - states and territories data set
+
+#### Column headers are values, not variable names
+
+1. Each column represents three variables instead of one - population, sex and region (Dolgun, A. 2020). I convert the data from wide to long format. The variable defined by the values of the column headings is State, the values in the column are Populations. 
+```{r}
+# pivot all columns except for the date column
+auspop <- auspop %>% pivot_longer(-date, names_to = "region", 
+                                  values_to = "population")
+# convert to the correct data type
+auspop$population <- as.numeric(auspop$population)
+```
+
+#### Multiple variables stored in one column
+
+2. There are two variables in the region and date columns. The string "Estimated Resident Population" is removed because there is already a population column. The ";" and white space is removed from cells before separating the region column into region and sex.
+```{r}
+auspop$region <- gsub("Estimated Resident Population", "", auspop$region)
+auspop$region <- gsub(pattern = ";", replacement = "", auspop$region)
+# remove leading and trailing white space in the region column with stringr
+auspop$region <- str_trim(auspop$region, side = "both")
+# separate into gender and region variables with tidyr
+auspop <- auspop %>% tidyr::separate(region, into = c("sex", "region"), sep = "   ")
+```
+
+## Understand (cont.) - Population data set
+I recode some variables so that auspop can merge with influenza in the desired format. I replaced Australian Capital Territory (ACT) with NSW because ACT belongs to that state.
+```{r}
+# recode the values for State
+auspop$region <- recode(auspop$region, "New South Wales" = "NSW", "Northern Territory" = "NT", "Australian Capital Territory" = "NSW", "Queensland" = "Qld",  "South Australia"="SA","Victoria"="Vic", "Western Australia"= "WA", "Tasmania" = "Tas")
+```
+I extract year and month into two columns. I sum up the populations for each year and month combination. 
+```{r, warning=FALSE}
+auspop <- auspop %>% tidyr::separate(date , into = c("year", "month", "day"), 
+                                     sep = "-")
+auspop$year <- as.numeric(auspop$year)
+auspop$month <- as.numeric(auspop$month)
+
+# sum up the populations by year and month
+auspop <- auspop %>% group_by(year, month, sex, region) %>% summarise(population
+= sum(population))
+```
+I removed the rows containing Persons in the sex column because the sum of population for males and females add up to the population for the population of Persons in each combination of year and month. I also remove the rows with Australia as the region, because it would cause outliers in the population variable. The population for Australia is much greater than the population ofstates. Australia, a country, is not the same scale of variable as states.
+```{r}
+# remove rows containing Persons element
+auspop <- auspop %>% filter(sex != "Persons")
+# remove rows containing Australia element
+auspop <- auspop %>% filter(region != "Australia")
+```
+Australian population is read as a tibble so needs to be converted in a data frame. All the variables were read as character but population should be a numeric variable so it was converted. 
+```{r}
+# types of variables and data structures
+summary(str(auspop))
+summary(attributes(auspop))
+auspop <- as.data.frame(auspop)
+auspop$population <- as.numeric(auspop$population)
+head(auspop)
+```
+
+## Data (cont.) - merge the two datasets
+left_join() is used to combine variables from influenza and auspop. I passed key variables as a character vector because influenza and auspop columns have same meanings but different names (Dolgun, A 2020). Since the data frames that form joined_flupop are tidy, joined_flupop also conforms to tidy data principles. 
+```{r}
+joined_flupop <- left_join(auspop, influenza, by = c("year" = "year", "month" = "month", "region" = "State", "sex" = "Sex"))
+head(joined_flupop)
+```
+
+##	Tidy & Manipulate Data II 
+The influenza data only includes influenza cases from 2009 onward, so I only 
+consider a subset of the data frame. I also ignore the rows beyond January 2020,
+because the influenza data does not have data beyond that date.
+```{r}
+# subset the data to year 2009 to 2020
+joined_subset <- joined_flupop %>% filter(year > 2008 & year < 2020)
+head(joined_subset)
+```
+I create a new variable showing the rate of influenza per row in percent. 
+```{r}
+joined_subset <- joined_subset %>% mutate(rate_percent = 
+                                               (number_of_cases/population)*100)
+head(joined_subset)
+```
+
+##	Scan I 
+
+### Investigate NA values in the joined_subset data frame
+which() finds the locations of missing values represented by NA in joined_subset. sum() counts the total number of NAs. colSums(is.na()) shows the number of NAs per column. number_of_cases and rate_percent each have 4 missing values.
+```{r}
+which(is.na(joined_subset))
+sum(is.na(joined_subset))
+colSums(is.na(joined_subset))
+```
+To check whether I should replace missing values in cases and rate with mean or median, I explore their distributions. Cases and rate distributions are highly right-skewed, so median imputation is more appropriate. 
+```{r}
+hist(joined_subset$number_of_cases)
+hist(joined_subset$rate_percent)
+# median imputation for number of cases
+joined_subset$number_of_cases <- impute(joined_subset$number_of_cases, fun = median)
+# median imputation for rate (percent)
+joined_subset$rate_percent <- impute(joined_subset$rate_percent, fun = median)
+```
+### Obvious Errors and Inconsistencies
+I have defined rules for joined_subset depending on whether columns are numerical or categorical. I saved rows violating rules as a data frame, then found their percentage (Dolgon, A 2020). There are no obvious errors.
+```{r}
+Rules <- editfile("data/editrules.txt", type = "all")
+Rules
+Violated <- violatedEdits(Rules, joined_subset)
+summary(Violated)
+```
+
+##	Scan II
+Referencing the number of cases and rate distributions above, the distributions are all highly right-skewed, so I cannot use the z-score method. The population distribution is bimodal with a peak below 1E6 and a smaller peak above 2E6. 
+```{r}
+hist(joined_subset$population)
+```
+
+I detect univariate outliers with Tukey's method, which defines outliers as values above and below the interquartile range (IQR) by 1.5*IQR. Population, number_of_cases and rate_percent seem to have many outliers.
+```{r}
+boxplot(joined_subset$population, main = "Boxplot of Population", ylab = "Population")
+boxplot(joined_subset$number_of_cases, main = "Boxplot of Number of Cases", ylab = "Number of Cases")
+boxplot(joined_subset$rate_percent, main = "Boxplot of Rate in Percent", ylab = "Rate in Percent")
+```
+
+I determine the outlier fences, location and number of outliers with box plots.
+```{r}
+# number of cases box plot
+# calculate the values for upper and lower quartiles to find the IQR
+q1c <- quantile(joined_subset$number_of_cases, probs = 0.25)
+q3c <- quantile(joined_subset$number_of_cases, probs = 0.75)
+iqrc <- q3c - q1c
+# using IQR, I calculate the outlier fences
+lower_fencec <- q1c - 1.5*iqrc
+upper_fencec <- q3c + 1.5*iqrc
+# location of outliers
+c_up_outliers <- which(joined_subset$number_of_cases > upper_fencec)
+c_low_outliers <- which(joined_subset$number_of_cases < lower_fencec)
+# number of outliers
+length(c_up_outliers) # there are 79 upper outliers
+length(c_low_outliers) # there are no lower fence outliers
+# outliers are in these rows
+c_up_outliers
+```
+```{r}
+# rate percent box plot
+# calculate the values for upper and lower quartiles to find the IQR
+q1r <- quantile(joined_subset$rate_percent, probs = 0.25)
+q3r <- quantile(joined_subset$rate_percent, probs = 0.75)
+iqrr <- q3r - q1r
+# using IQR, I calculate the outlier fences
+lower_fencer <- q1r - 1.5*iqrr
+upper_fencer <- q3r + 1.5*iqrr
+# location of outliers
+r_up_outliers <- which(joined_subset$rate_percent > upper_fencer)
+r_low_outliers <- which(joined_subset$rate_percent < lower_fencer)
+# number of outliers
+length(r_up_outliers) # there are 68 upper fence outliers
+length(r_low_outliers) # there are no lower fence outliers
+# outliers are in these rows
+r_up_outliers
+```
+
+### Bivariate box plots
+Although the data is multivariate, I use bivariate box plots to compare numerical variables population, number_of_cases and rate_percent with categorical variables sex and region. The spread of population by sex is similar. Both sexes have similar quartiles for population. The population by region for NSW, Vic and Qld in descending order are much greater than the population for other regions. The spreads of number of cases and thus rate by sex are again similar, both sexes have similar quartiles. However, the number of cases and therefore rate by region have similar spreads, with the three most populated states having many more outliers than other states. 
+```{r, out.width="75%"}
+# population box plots
+boxplot(joined_subset$population ~ joined_subset$sex, main = "Population by sex", ylab = "Population", xlab = "Sex")
+boxplot(joined_subset$population ~ joined_subset$region, main = "Population by region", ylab = "Population", xlab = "Region")
+# number of cases box plots
+boxplot(joined_subset$number_of_cases ~ joined_subset$sex, main = "Number of cases by sex", ylab = "Number of Cases", xlab = "Sex")
+boxplot(joined_subset$number_of_cases ~ joined_subset$region, main = "Number of cases by region", ylab = "Number of Cases", xlab = "Region")
+# rate percent box plots
+boxplot(joined_subset$rate_percent ~ joined_subset$sex, main = "Rate in Percent by sex", ylab = "Rate in Percent", xlab = "Sex")
+boxplot(joined_subset$rate_percent ~ joined_subset$region, main = "Rate in Percent by region", ylab = "Rate in Percent", xlab = "Region")
+```
+
+### Multivariate outliers
+There are more than two numeric variables so it is most reliable to use
+Mahalanobis distance to detect outliers on a QQ plot. It is not appropriate to use bivariate scatter plots. I select the possible multivariate outliers and store them as a data frame.
+```{r}
+# subset joined_subset to contain only numeric variables
+joined_subset_detect <- joined_subset[, 5:7]
+results <- mvn(data = joined_subset_detect, multivariateOutlierMethod = "quan", 
+               showOutliers = TRUE)
+possoutliers <- as.data.frame(results$multivariateOutliers)
+```
+
+### Handling Outliers
+I cannot exclude the multivariate outliers because there are a very large number of them. Removing the records would impact accuracy of statistical analyses and increase sampling error (from decrease in sample size). I check the row values of suggested outliers in the joined_subset dataframe. I match the row numbers in results$multivariateOutliers and joined_subset by making row IDs for joined_subset. I check the rows that are not outliers by using anti_join for the possible outliers data frame and joined_subset, which would return rows in joined_subset that are not present in the possible outliers data frame.
+```{r}
+# make row ID column
+joined_subset <- mutate(joined_subset, ID = row_number())
+# match row numbers
+possoutliers <- joined_subset[joined_subset$ID %in% possoutliers$Observation,]
+head(possoutliers)
+# check values that are not outliers with anti_join
+notoutliers <- anti_join(joined_subset, possoutliers)
+head(notoutliers)
+```
+The cause of outliers could be biological. Some month and year combinations have higher cases than others due to new flu strains appearing (MacIntyre, C et al, 
+2017). There could be intentional error since the case count relies on self-reported infleunza diagnoses. Since the influenza cases are recorded from the Australian disease surveillance system (Department of Health, 2021), the number of cases changes depending on whether patients notify their GPs about having the flu. Hence, the actual number of cases may be under-reported (Department of Health, 2021). The cause of outliers is not data entry/processingerror, so I do not impute them (Dolgun, A 2020).    
+
+##	Transform 
+Since the distributions for numerical variables are right-skewed with heterogeneous variances, I need to transform them into normal distributions with homogeneous variances to meet assumptions for regression and statistical analysis (Dolgun, A 2020).
+
+Reciprocal, square root, log and Box Cox transformations work well for right-skewed distributions. However, reciprocal and log transformations cannot work on zero values in the population distribution, so I can only use square root and Box Cox transformations.
+
+For square root transformations, the distribution skewness did not change except for population where it is reduced.
+```{r}
+sqrt_pop <- sqrt(joined_subset$population)
+hist(sqrt_pop)
+sqrt_number_of_cases <- sqrt(joined_subset$number_of_cases)
+hist(sqrt_number_of_cases)
+sqrt_rate <- sqrt(joined_subset$rate_percent)
+hist(sqrt_rate)
+```
+
+Setting the lambda parameter to auto finds the best BoxCox transformation parameter lambda. BoxCox transformation made all distributions uniform, in particular the cases and rate distributions are nearly normal. However, the population distribution is not normal because there are no counts between 1E6 and 2E6. 
+```{r}
+BoxCox_pop <- BoxCox(joined_subset$population, lambda = "auto")
+hist(BoxCox_pop)
+BoxCox_number_of_cases <- BoxCox(joined_subset$number_of_cases, lambda = "auto")
+hist(BoxCox_number_of_cases)
+BoxCox_rate <- BoxCox(joined_subset$rate_percent, lambda = "auto")
+hist(BoxCox_rate)
+```   
+
+#### References
+1.    Department of Health (2021). Influenza (laboratory confirmed) Disease 
+Surveillance Australia - Public Data Set, Public datasets, data file, Australian Government, Department of Health, Canberra, viewed 7 October 2021, https://www1.health.gov.au/internet/main/publishing.nsf/Content/ohp-pub-datasets.html  
+2.    Australian Bureau of Statistics (2021). Population - states and territories, 
+National, state and territory population, data file, Australian Bureau of 
+Statistics, Canberaa, viewed 7 October 2021, https://www.abs.gov.au/statistics/people/population/national-state-and-territory-population/latest-release#data-download
+3.    Microsoft Office Support (n.d.). Date Systems in Excel, viewed 7 October 2021, https://support.microsoft.com/en-us/office/date-systems-in-excel-e7fe7167-48a9-4b96-bb53-5612a800b487
+4.    Wickham, H (2014). Tidy Data. Journal of Statistical Software, 59(10), 1 - 23, 
+viewed 7 October 2021, 
+https://www.jstatsoft.org/index.php/jss/article/view/v059i10/v59i10.pdf   
+5.    Dolgun, A (2020). Module 4, Tidy and Manipulate: Tidy Data Principles and 
+Manipulating Data, Data Wrangling (Preprocessing), viewed 7 October 2021, http://rare-phoenix-161610.appspot.com/secured/Module_04.html  
+6.    Dolgun, A (2020). Module 5, Scan: Missing Values, Data Wrangling 
+(Preprocessing), viewed 10 October 2021, 
+http://rare-phoenix-161610.appspot.com/secured/Module_05.html 
+7.    Dolgun, A (2020). Module 6, Scan: Outliers, Data Wrangling (Preprocessing), 
+viewed 10 October 2021, 
+http://rare-phoenix-161610.appspot.com/secured/Module_06.html   
+8.    Dolgun, A (2020). Module 7, Transform: Data Transformation, Standardisation, 
+and Reduction, viewed 10 October 2021, http://rare-phoenix-161610.appspot.com/secured/Module_07.html  
+9.    MacIntyre, C, Chughtai, AA and Bui, C (2017). The number of new flu viruses 
+is increasing, and could lead to a pandemic, The Conversation, viewed 10 October 
+2021, https://theconversation.com/the-number-of-new-flu-viruses-is-increasing-and-could-lead-to-a-pandemic-75835   
+10.   Department of Health (2021). National notifiable diseases: Australia's 
+notifiable diseases status: Annual report of the National Notifiable Diseases 
+Surveillance System, The Department of Health, Australian Government, viewed 10 
+October 2021, https://www1.health.gov.au/internet/main/publishing.nsf/Content/cda-pubs-annlrpt-nndssar.htm    

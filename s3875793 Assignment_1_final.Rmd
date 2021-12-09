@@ -1,0 +1,306 @@
+---
+title: "MATH2405 TP3, 2021"
+author: "Elizabeth Chan S3875793"
+subtitle: Assignment 1
+output:
+  html_document:
+    df_print: paged
+  html_notebook: default
+  pdf_document: default
+geometry: margin=2cm
+---
+
+## Setup
+
+```{r, echo = TRUE, warnings = FALSE}
+library(knitr) # to knit the RMarkdown into HTML
+library(readxl) # import data from Excel
+library(dplyr) # for data manipulation
+library(tidyr) # for tidy data principles
+```
+readxl package is used to get and export data from Excel files and specify the sheet we want, since the data source contains multiple sheets. dplyr package is used to manipulate data in a readable way. tidyr package is used to reshape the data formats, rows and columns. 
+
+## Locate Data 
+The Crime Statistics Agency Data Tables - Criminal Incidents data set is from open data provided by the Victorian Government, Australia (Crime Statistics Agency, 2016). In sheet "Table 03", there are 3 numeric variables and 4 categorical variables.
+
+I stored the data set as a temporary file with the base R functions tempfile() and download.file() on my Windows machine.
+```{r}
+# scraping Excel files stored online
+crime_url <- "https://files.crimestatistics.vic.gov.au/2021-07/Data_Tables_Criminal_Incidents_Visualisation_Year_Ending_March_2021.xlsx?lKBgt7_eyuCOD35cmRfvh2gL6mGDl0gb="
+
+# store Excel file as a temporary file
+tmp <- tempfile(fileext = ".xlsx")
+download.file(crime_url, destfile = tmp, mode = "wb")
+```
+
+## Read/Import Data
+
+```{r}
+# import Excel (.xlsx) data
+crime_sheets <- readxl::excel_sheets(tmp)
+crime_sheets
+```
+To check the number of sheets and which ones are relevant for data analysis, I check the sheet names with the excel_sheets() function.
+
+I want to explore trends between crime division, incident number and rate, so I access the "Table 03" worksheet. read_xlsx() function is used to read the .xlsx file. 
+```{r}
+crime <- readxl::read_xlsx(tmp, sheet = "Table 03")
+head(crime)
+```
+The output shows that the dataset is read as a tibble, so I need to convert it into a dataframe.
+```{r}
+crime <- as.data.frame(crime)
+
+# checking equivalent to original data
+head(crime)                  
+```
+
+## Data description
+
+The data set describes crimes in Victoria between March 2017 to March 2021. Since the data is open, anyone can reproduce and validate the statistical analyses of this data set. The Crime Statistics Agency operate independently of the Victorian Police, which means any counts and descriptions should be objective and have integrity. The objective of the data set is to inform politicians, researchers and the public. This could result in better fund allocation towards victims affected by offences that are more prevalent in Victoria, as well as psychologists and legal services for those victims. The Contents state that some confidential offences with less than 3 incidents are inputted as 2 incidents, which could affect analysis. 
+
+Table 03 has 7 variables - Year, Year Ending, Offence Division, Offence Subdivision, Family Incident Flag, Incidents Recorded and Rate per 100,000 population. The data is in long format because each Offence Division has data in multiple rows. There are no typos, missing and impossible values.
+
+- Year is continuous quantitative variable describing the year the offence occurred. 
+- Year Ending is a nominal variable showing the offense counts are up to March each year. 
+- Offence Division and Offence Subdivision are multinominal variables that label different crime types. 
+- Family Incident Flag Incidents is a binary nominal variable describing whether the criminal is related to the victim.
+- Incidents Recorded is a discrete quantitative variable describing the number of offences in Victoria.
+- Recorded Rate per 100,000 population is a discrete quantitative variable describing the rate of offences in Victoria.
+
+## Inspect dataset and variables
+
+dim() function with crimes dataset as the parameter returns two elements from left to right, the number of rows and the number of columns. There are 268 rows and 7 columns.
+```{r}
+# dimensions of data frame
+dim(crime)
+```
+```{r}
+# checking data types of each attribute
+class(crime$Year)
+class(crime$`Year ending`)
+class(crime$`Offence Division`)
+class(crime$`Offence Subdivision`)
+class(crime$`Family Incident Flag`)
+class(crime$`Incidents Recorded`)
+class(crime$`Rate per 100,000 population`)
+```
+Offence Division, Offence Subdivision and Family Incident Flag are character values representing categorical variables, so they should be converted to factors using as.factor(). is.factor() is used to test if the column classes were correctly converted. The logical TRUE shows that this is the case. Offence Division, Offence Subdivision and Family Incident Flag are in columns 3 to 5. I set Incidents Recorded as integer because it is a discrete quantitative variable.
+```{r}
+# type conversion
+crime$`Offence Division` <- crime$`Offence Division` %>% as.factor()
+crime$`Offence Subdivision` <- crime$`Offence Subdivision` %>% as.factor()
+crime$`Family Incident Flag` <- crime$`Family Incident Flag` %>% as.factor()
+crime$`Incidents Recorded` <- as.integer(crime$`Incidents Recorded`)
+```
+```{r}
+# check type of columns again to see if data type changed correctly
+is.factor(crime$`Offence Division`)
+is.factor(crime$`Offence Subdivision`)
+is.factor(crime$`Family Incident Flag`)
+is.integer(crime$`Incidents Recorded`)
+```
+
+```{r}
+# check factor levels
+levels(crime[ ,3])
+```
+```{r}
+levels(crime[ ,4])
+```
+```{r}
+levels(crime[ ,5])
+```
+I rename the Incidents Recorded column to Number of Incidents to represent the values better.
+```{r}
+# rename column names
+crime <- crime %>% rename("Number of Incidents" = "Incidents Recorded")
+```
+
+## Tidy data 
+
+### Problem 1
+Year Ending is a blank variable that should be removed because the response is the same for every row ("March"). "Year ending" column header does not describe the month, but the data set wants to show that the incident counts were carried out up to March annually. Thus, I need to keep the variable. I convert "March" from a character to a numeric value so it can be the same type as the numeric Year column. Then, I combine the Year and Month columns into a new column called Date, a column header name that describes the values. Creating a date variable allows time series analysis (Dolgun, A. 2020).
+
+```{r}
+# convert March character value into number 3
+crime$`Year ending`[crime$`Year ending` == "March"] <- "3"
+
+# rename Year ending column into Month
+crime <- crime %>%
+  rename("Month" = "Year ending")
+
+# convert Month column values into numeric 
+crime$Month <- as.numeric(crime$Month)
+
+# check new class of Month variable
+class(crime$Month)
+```
+```{r}
+# merge the Year and Month columns to form a new Date variable in YY-MM format
+crime1 <- crime %>% unite(Date, Year, Month, sep = "-0")
+```
+
+### Problem 2
+The data is messy because columns 3 and 4 each store more than one variable - the offence ID and the offence description. I split the Offence Division and Offence Subdivision compound variables into 4 individual variables to separate offence ID from offence descriptions using separate() from tidyr and follow Tidy Data principle "Every cell is a single value" (Wickham, H 2014).
+
+The first parameter is the data frame crime. I separate the columns one at a time because separate() only takes one argument for the col. into specifies the new column names after splitting. sep = "\\s" shows that I want to separate the column values using the first white space. extra = "merge" splits the columns at most the same number of times as the number of new columns (Dolgun, A. 2020). In this case, this is twice.
+```{r}
+# split offence division column
+crime2 <- separate(crime1, col = c("Offence Division"), 
+                   into = c("Offence Division Classification", 
+                            "Offence Division Description"), 
+                   sep = "\\s", extra = "merge")
+
+# split offence subdivision column
+crime2 <- separate(crime2, col = c("Offence Subdivision"), 
+                   into = c("Offence Subdivision Classification", 
+                            "Offence Subdivision Description"), 
+                   sep = "\\s", extra = "merge")
+
+# make sure categorical variables are factors
+crime2$`Offence Division Classification` <- as.factor(crime2$`Offence Division Classification`)
+crime2$`Offence Division Description` <- as.factor(crime2$`Offence Division Description`)
+crime2$`Offence Subdivision Classification`<- as.factor(crime2$`Offence Subdivision Classification`)
+crime2$`Offence Subdivision Description` <- as.factor(crime2$`Offence Subdivision Description`)
+
+# set Number of Incidents to integer
+crime2$`Number of Incidents` <- as.integer(crime2$`Number of Incidents`)
+
+# checking equivalent to original data and desired output
+head(crime2)
+```
+
+## Summary statistics 
+The two quantitative variables are Number of Incidents and Rate per 100,000 population, so I group them by the categorical variable Offence Division. summarise() creates new columns by using summary statistics functions. dplyr calculates the summary statistics for each unique value in Offence Division, then combines the Offence Division values into a new data frame (Grolemund, G. 2018). 
+
+### Summary statistics for Offence Division column
+```{r}
+# mean
+odsummary <- crime2 %>% 
+  group_by(`Offence Division Description`) %>% 
+  summarise(`Mean Number of Incidents` = mean(`Number of Incidents`), 
+            `Median Number of Incidents` = median(`Number of Incidents`),
+            `Minimum Number of Incidents` = min(`Number of Incidents`), 
+            `Maximum Number of Incidents` = max(`Number of Incidents`),
+            `Standard Deviation of Number of Incidents` = 
+              sqrt(var(`Number of Incidents`)))
+
+odsummary
+```
+
+### Summary Statistics for Rate per 100,000 population column
+```{r}
+# mean
+ratesummary <- crime2 %>% 
+  group_by(`Offence Division Description`) %>% 
+  summarise(`Mean Rate of Incidents` = mean(`Rate per 100,000 population`),
+            `Median Rate of Incidents` = median(`Rate per 100,000 population`),
+            `Minimum Rate of Incidents` = min(`Rate per 100,000 population`), 
+            `Maximum Rate of Incidents` = max(`Rate per 100,000 population`),
+            `Standard Deviation of Rate of Incidents` = 
+              sqrt(var(`Rate per 100,000 population`)))
+
+ratesummary
+```
+## Create a list
+I rank the Offence Division Classification observations using dense_rank. This gives me numbers 1 to 6 because there are 6 different Office Division Classification levels. I convert the integers formed from the order of factor levels into a list. 
+```{r}
+# rank the Offence Division Classification categories
+mapping <- dense_rank(crime2$`Offence Division Classification`)
+mapping <- as.list(mapping)
+
+head(mapping)
+```
+
+## Join the list
+I convert mapping into a data frame. rbind() ensures that each list value has rows corresponding to Offence Division Classification in crime2. mutate() creates a new row ID variable using the row numbers for both data frames so that they can join with a common variable. left_join() allows me to keep all variables in the crime2 data frame and add the Category column from new_df, using the key variable id. Finally, I dropped the ID column because it is not needed anymore (Dolgun, A 2020).
+```{r}
+# convert the list into a dataframe
+new_df <- as.data.frame(do.call(rbind, mapping))
+
+# rename column header to give meaning
+new_df <- new_df %>% rename(Category = V1)
+new_df$Category <- as.numeric(new_df$Category)
+
+# add row ID variable
+crime2 <- crime2 %>% mutate(id = row_number())
+new_df <- new_df %>% mutate(id = row_number())
+
+# join this list back into crime2
+crime_final <- left_join(crime2, new_df, by = "id")
+
+# remove the ID column
+crime_final <- select(crime_final, -id)
+head(crime_final)
+```
+
+## Subsetting I
+I selected the first 10 rows of the crime_final data frame and converted it using as.matrix(). str() function is used to compare data frame and matrix structures.
+```{r}
+# select the first 10 rows of crime_final, including all columns
+subset1 <- crime_final[1:10, 1:9]
+
+# structure of the subset
+str(subset1)
+
+# convert into matrix
+matrix1 <- as.matrix(subset1)
+
+# structure of matrix
+str(matrix1)
+```
+Although data frames and matrices are both two-dimensional data structures, data frames are heterogeneous whereas matrices are homogeneous. This means that data frames can store variables of different types whereas matrices can only store variables of the same type. Therefore, we can see there are character, factor and numeric variables in the data frame, but all 9 columns are characters in the matrix. R converted all variables in the data frame to be the same type. Character variables cannot be converted to numeric and factor variables, so the numeric and factor variables were converted to character variables (RMIT Online, 2021).
+
+## Subsetting II
+I select the first and last row using the dimensions of the crime_final data frame. I combine the rows with c(). Column dimension is left blank to select all columns. This returns a tibble so I convert subset2 into a data frame. I save it as an RData file in my output directory.
+```{r}
+subset2 <- as.data.frame(crime_final[c(1, 268), ])
+
+save(subset2, file = "output/subset2.RData")
+```
+
+## Create a new Data Frame
+I put as.integer() to ensure all values inside the year column are integer, since number of streams is discrete quantitative variable. I assigned levels to the ordinal variable popularity and ordered = TRUE to order it. cbind() combines the data frame and vector by column.
+```{r}
+# create a new data frame using data.frame()
+music <- data.frame(streams = as.integer(c(798083, 767581, 570932, 471325)), 
+                    popularity = factor(c("Very Popular", "Popular", 
+                                          "Not Popular", "Very Unpopular"), 
+                                       levels=c("Very Popular", "Popular", 
+                                                "Not Popular", "Very Unpopular")
+                                       , ordered=TRUE))
+
+# create a numeric vector 
+year <- c(2012, 2013, 2015, 2017)
+
+# add the vector to my data frame with cbind()
+music_new <- cbind(music, year)
+music_new
+```
+
+
+## Create another Data Frame
+left_join() allows me to keep all variables in the music_new data frame and add the title column from music2, using the key variable streams. I put order=FALSE for the nominal variable title because unordered factors represent categorical variables.
+```{r}
+# second data frame with common variable year
+music2 <- data.frame(streams = as.integer(c(798083, 767581, 570932, 471325)),
+                     title = factor(c("Orfeu", "Canon", "SHINE", "Tempest"), 
+                                    ordered = FALSE))
+
+# join data frames
+joined_music <- left_join(music_new, music2, by = "streams")
+joined_music
+```
+
+## References
+Crime Statistics Agency (2016). Crime Statistics Agency Data Tables - Criminal Incidents, Victorian Government open data, data file, Australian Government, Crime Statistics Agency, Melbourne, viewed 16/9/21, <https://discover.data.vic.gov.au/dataset/crime-by-location-data-table> 
+
+Wickham, H (2014). Tidy Data. Journal of Statistical Software, 59(10), 1 - 23, viewed 16/9/21, <https://www.jstatsoft.org/index.php/jss/article/view/v059i10/v59i10.pdf>
+
+Dolgun, A (2020). Module 4, Tidy and Manipulate: Tidy Data Principles and Manipulating Data, Data Wrangling (Preprocessing) viewed 17/9/21, <http://rare-phoenix-161610.appspot.com/secured/Module_04.html>
+
+Grolemund, G. (2018). Data Manipulation Tools: dplyr -- Pt 3 Intro to the Grammar of Data Manipulation with R, YouTube, 15 March, viewed 17/9/21, <https://youtu.be/Zc_ufg4uW4U>
+
+RMIT Online (2021). 2.1.4 Data Structures in R, MATH2405, RMIT University, viewed 18/9/21, <https://rmit.instructure.com/courses/82538/pages/2-dot-1-4-data-structures-in-r?module_item_id=3259714>. 
+
